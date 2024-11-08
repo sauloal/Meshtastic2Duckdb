@@ -1,0 +1,6 @@
+*.swp
+*.duckdb
+
+.venv/
+__pycache__/
+nodes/

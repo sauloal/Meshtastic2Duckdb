@@ -1,0 +1,9 @@
+pytap2
+meshtastic
+duckdb
+
+SQLAlchemy
+duckdb-engine
+
+fastapi[standard]
+
