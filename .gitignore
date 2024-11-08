@@ -1,5 +1,6 @@
 *.swp
 *.duckdb
+*.old
 
 .venv/
 __pycache__/

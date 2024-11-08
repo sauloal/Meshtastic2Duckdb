@@ -3,14 +3,14 @@ import json
 import typing
 import dataclasses
 
-from typing import Annotated
+from typing import Annotated, Optional
 
-from sqlalchemy             import BigInteger, SmallInteger, Integer
+from sqlalchemy             import BigInteger, SmallInteger, Integer, Text
 from sqlalchemy.orm         import Mapped
 from sqlalchemy.orm         import mapped_column
 from sqlalchemy.orm         import registry
 
-from sqlalchemy import Sequence
+#from sqlalchemy import Sequence
 
 # https://docs.sqlalchemy.org/en/20/orm/dataclasses.html
 # https://docs.sqlalchemy.org/en/20/orm/declarative_tables.html
@@ -27,22 +27,22 @@ int32 = Annotated[int, Integer     ]
 int64 = Annotated[int, BigInteger  ]
 
 # https://docs.sqlalchemy.org/en/20/orm/declarative_tables.html#mapping-multiple-type-configurations-to-python-types
-reg = registry(
-	type_annotation_map = {
-		int8 : SmallInteger(), # https://docs.sqlalchemy.org/en/20/core/type_basics.html#sqlalchemy.types.SMALLINT
-		int16: SmallInteger(),
-		int32: Integer()     , # https://docs.sqlalchemy.org/en/20/core/type_basics.html#sqlalchemy.types.INT
-		int64: BigInteger()    # https://docs.sqlalchemy.org/en/20/core/type_basics.html#sqlalchemy.types.BIGINT
-	}
-)
 
 
+Sequences = []
 
-@dataclasses.dataclass
-class Fields:
-	_shared_fields: typing.ClassVar[list[tuple[str, typing.Callable]]] = []
-	_fields       : typing.ClassVar[list[tuple[str, typing.Callable]]] = []
+type_annotation_map = {
+	int8 : SmallInteger(), # https://docs.sqlalchemy.org/en/20/core/type_basics.html#sqlalchemy.types.SMALLINT
+	int16: SmallInteger(),
+	int32: Integer()     , # https://docs.sqlalchemy.org/en/20/core/type_basics.html#sqlalchemy.types.INT
+	int64: BigInteger()    # https://docs.sqlalchemy.org/en/20/core/type_basics.html#sqlalchemy.types.BIGINT
+}
 
+
+from sqlmodel import Field, Session, SQLModel, create_engine, select, Column, Sequence
+from typing import Annotated
+
+class SQLModelFields:
 	@classmethod
 	def _parse_fields(cls, packet):
 		try:
@@ -56,7 +56,15 @@ class Fields:
 		fields  = cls._parse_fields(packet)
 
 		try:
-			inst    = cls(**fields)
+			#print("DIR   ", dir(cls))
+			#print("MODEL ", cls.model_fields)
+			model_fields = getattr(cls, "model_fields", {})
+			orm     = { **{k:v for k,v in fields.items()}, **{k:None for k,_ in model_fields.items() if k not in fields} }
+			#print("ORM    ", orm)
+			if hasattr(cls, "from_orm"):
+				inst    = cls.from_orm(orm)
+			else:
+				inst    = cls(**orm)
 		except Exception as e:
 			print("cls           ", cls               , file=sys.stderr)
 			print("fields        ", fields            , file=sys.stderr)
@@ -67,32 +75,51 @@ class Fields:
 
 		return inst
 
+	@classmethod
+	def from_nodes(cls, nodes) -> "list[Node]":
+		instances = [None] * len(nodes)
+		for pos, (node_id, data) in enumerate(sorted(nodes.items())):
+			#print("node_id", node_id)
+			#print("data", data)
+			inst = cls.from_packet(data)
+			#print(inst)
+			instances[pos] = inst
+		return instances
+
 	def toJSON(self) -> str:
-		d = dataclasses.asdict(self)
+		d = self.toDICT()
 		j = json.dumps(d)
 		return j
 
+	def toDICT(self) -> dict[str, typing.Any]:
+		d = {k:v for k,v in self if k not in ["id", "metadata"]}
+		return d
+
+
+
+
+
 
 @dataclasses.dataclass
-class Message(Fields):
-	from_node : Mapped[int64]
-	to_node   : Mapped[int64]
+class Message(SQLModelFields):
+	from_node : int64        = Field(              sa_type=BigInteger()  , nullable=False )
+	to_node   : int64        = Field(              sa_type=BigInteger()  , nullable=False )
 
-	fromId    : Mapped[str   | None]
-	toId      : Mapped[str]
+	fromId    : str   | None = None
+	toId      : str          = Field(              sa_type=Text()        , nullable=False )
 
-	rxTime    : Mapped[int64]
-	rxRssi    : Mapped[int16 | None]
-	rxSnr     : Mapped[float | None]
+	rxTime    : int64 | None = Field(default=None, sa_type=BigInteger()  , nullable=True  )
+	rxRssi    : int16 | None = Field(default=None, sa_type=SmallInteger(), nullable=True  )
+	rxSnr     : float | None = None
 
-	hopStart  : Mapped[int8  | None]
-	hopLimit  : Mapped[int8  | None]
+	hopStart  : int8  | None = Field(default=None, sa_type=SmallInteger(), nullable=True  )
+	hopLimit  : int8  | None = Field(default=None, sa_type=SmallInteger(), nullable=True  )
 
-	message_id: Mapped[int64]
-	priority  : Mapped[str   | None]
+	message_id: int64        = Field(              sa_type=BigInteger()  , nullable=False )
+	priority  : str   | None = None
 
-	portnum   : Mapped[str]
-	bitfield  : Mapped[int8  | None]
+	portnum   : str          = Field(              sa_type=Text()        , nullable=False )
+	bitfield  : int8  | None = Field(default=None, sa_type=SmallInteger(), nullable=True  )
 
 	_shared_fields = [
 		["from_node"  , lambda packet: packet["from"]                         ],
@@ -101,7 +128,7 @@ class Message(Fields):
 		["fromId"     , lambda packet: packet["fromId"]                       ],
 		["toId"       , lambda packet: packet["toId"]                         ],
 
-		["rxTime"     , lambda packet: packet["rxTime"]                       ],
+		["rxTime"     , lambda packet: packet.get("rxTime"  , None)           ],
 		["rxRssi"     , lambda packet: packet.get("rxRssi"  , None)           ],
 		["rxSnr"      , lambda packet: packet.get("rxSnr"   , None)           ],
 
@@ -120,16 +147,22 @@ class Message(Fields):
 	@classmethod
 	def from_packet_decoded(cls, packet) -> "Telemetry|NodeInfo|Position|TextMessage|RangeTest":
 		message = Message.from_packet(packet)
+
 		if   message.portnum == "TELEMETRY_APP":
 			return Telemetry.from_packet(packet)
+			pass
 		elif message.portnum == "NODEINFO_APP":
 			return NodeInfo.from_packet(packet)
+			pass
 		elif message.portnum == "POSITION_APP":
 			return Position.from_packet(packet)
+			pass
 		elif message.portnum == "TEXT_MESSAGE_APP":
 			return TextMessage.from_packet(packet)
+			pass
 		elif message.portnum == "RANGE_TEST_APP":
 			return RangeTest.from_packet(packet)
+			pass
 		else:
 			raise ValueError(f"Unknown portnum {message.portnum}. {packet}")
 
@@ -137,26 +170,35 @@ class Message(Fields):
 
 
 
-telemetry_id_seq = Sequence("Telemetry_id_seq")
+def gen_id_seq(name:str):
+	id_seq = Sequence(f"{name.lower()}_id_seq")
+	Sequences.append( id_seq )
+	#field  = Field(Column(BigInteger, id_seq, server_default=id_seq.next_value(), primary_key=True), primary_key=True, sa_column_kwargs={"server_default": id_seq.next_value()})
+	#return field
+	return id_seq
 
-@reg.mapped_as_dataclass
-class Telemetry(Message):
-	__tablename__ = "Telemetry"
 
-	time              : Mapped[int64]
-	batteryLevel      : Mapped[int8  | None] # 76
-	voltage           : Mapped[float | None] # 3.956
-	channelUtilization: Mapped[float | None] # 5.8016667
-	airUtilTx         : Mapped[float | None] # 4.323389
-	uptimeSeconds     : Mapped[int32 | None] # 51470
-	numPacketsTx      : Mapped[int32 | None] # 62
-	numPacketsRx      : Mapped[int32 | None] # 103
-	numOnlineNodes    : Mapped[int16 | None] # 3
-	numTotalNodes     : Mapped[int16 | None] # 3
-	lux               : Mapped[float | None] # 0.0
-	temperature       : Mapped[float | None] # 25.240046
 
-	id                : Mapped[int64] = mapped_column(BigInteger, telemetry_id_seq, server_default=telemetry_id_seq.next_value(), primary_key=True, init=False)
+
+
+
+telemetry_id_seq = gen_id_seq("telemetry")
+
+class Telemetry(Message, SQLModel, table=True):
+	time                : int64        = Field(              sa_type=BigInteger()  , nullable=False )
+	batteryLevel        : int8  | None = Field(default=None, sa_type=SmallInteger(), nullable=True  ) # 76
+	voltage             : float | None = None # 3.956
+	channelUtilization  : float | None = None # 5.8016667
+	airUtilTx           : float | None = None # 4.323389
+	uptimeSeconds       : int32 | None = None # 51470
+	numPacketsTx        : int32 | None = None # 62
+	numPacketsRx        : int32 | None = None # 103
+	numOnlineNodes      : int16 | None = Field(default=None, sa_type=SmallInteger(), nullable=True ) # 3
+	numTotalNodes       : int16 | None = Field(default=None, sa_type=SmallInteger(), nullable=True ) # 3
+	lux                 : float | None = None # 0.0
+	temperature         : float | None = None # 25.240046
+
+	id                  : int64 | None = Field(default=None, sa_column=Column(BigInteger(), primary_key=True, server_default=telemetry_id_seq.next_value()) )
 
 	_fields: typing.ClassVar[list[tuple[str, typing.Callable]]] = [
 		["time"               , lambda packet: packet["decoded"]["telemetry"]["time"]                                                ],
@@ -243,22 +285,19 @@ toId                    : <class 'str'> ^all
 
 
 
+nodeinfo_id_seq = gen_id_seq("nodeinfo")
 
-nodeinfo_id_seq = Sequence("NodeInfo_id_seq")
+class NodeInfo(Message, SQLModel, table=True):
+	user_id             : str = Field(nullable=False, sa_type=Text() ) # !a
+	longName            : str = Field(nullable=False, sa_type=Text() ) # M
+	shortName           : str = Field(nullable=False, sa_type=Text() ) # M
+	macaddr             : str = Field(nullable=False, sa_type=Text() ) # 8Z
+	hwModel             : str = Field(nullable=False, sa_type=Text() ) # TRACKER_T1000_E
+	role                : str = Field(nullable=False, sa_type=Text() ) # TRACKER
+	publicKey           : str = Field(nullable=False, sa_type=Text() ) # S3
 
-@reg.mapped_as_dataclass
-class NodeInfo(Message):
-	__tablename__ = "NodeInfo"
-
-	user_id   : Mapped[str] # !a
-	longName  : Mapped[str] # M
-	shortName : Mapped[str] # M
-	macaddr   : Mapped[str] # 8Z
-	hwModel   : Mapped[str] # TRACKER_T1000_E
-	role      : Mapped[str] # TRACKER
-	publicKey : Mapped[str] # S3
-
-	id        : Mapped[int64] = mapped_column(BigInteger, nodeinfo_id_seq, server_default=nodeinfo_id_seq.next_value(), primary_key=True, init=False)
+	id                  : int64 | None = Field(default=None, sa_column=Column(BigInteger(), primary_key=True, server_default=nodeinfo_id_seq.next_value()) )
+	#id                  : int64 | None = Field(Column(BigInteger, nodeinfo_id_seq, server_default=nodeinfo_id_seq.next_value(), primary_key=True), primary_key=True, sa_column_kwargs={"server_default": nodeinfo_id_seq.next_value()})
 
 	_fields: typing.ClassVar[list[tuple[str, typing.Callable]]] = [
 		["user_id"   , lambda packet: packet["decoded"]["user"]["id"]       ],
@@ -301,25 +340,23 @@ toId                    : <class 'str'> !f8
 
 
 
-position_id_seq = Sequence("Position_id_seq")
+position_id_seq = gen_id_seq("position")
 
-@reg.mapped_as_dataclass
-class Position(Message):
-	__tablename__ = "Position"
+class Position(Message, SQLModel, table=True):
+	latitudeI           : int32 = Field(              sa_type=Integer()       , nullable=False ) # 52
+	longitudeI          : int32 = Field(              sa_type=Integer()       , nullable=False ) # 48
+	altitude            : int16 = Field(              sa_type=SmallInteger()  , nullable=False ) # 11
+	time                : int64 = Field(              sa_type=BigInteger()    , nullable=False ) # 17
+	PDOP                : int16 = Field(              sa_type=SmallInteger()  , nullable=False ) # 272
+	groundSpeed         : int8  = Field(              sa_type=SmallInteger()  , nullable=False ) # 1
+	groundTrack         : int8  = Field(              sa_type=SmallInteger()  , nullable=False ) # 16
+	satsInView          : int8  = Field(              sa_type=SmallInteger()  , nullable=False ) # 6
+	precisionBits       : int8  = Field(              sa_type=SmallInteger()  , nullable=False ) # 32
+	latitude            : float                                                                  # 52
+	longitude           : float = Field(              sa_type=BigInteger()    , nullable=False ) #  4
 
-	latitudeI           : Mapped[int32] # 52
-	longitudeI          : Mapped[int32] # 48
-	altitude            : Mapped[int16] # 11
-	time                : Mapped[int64] # 17
-	PDOP                : Mapped[int16] # 272
-	groundSpeed         : Mapped[int8 ] # 1
-	groundTrack         : Mapped[int8 ] # 16
-	satsInView          : Mapped[int8 ] # 6
-	precisionBits       : Mapped[int8 ] # 32
-	latitude            : Mapped[float] # 52
-	longitude           : Mapped[float] #  4
-
-	id                  : Mapped[int64] = mapped_column(BigInteger, position_id_seq, server_default=position_id_seq.next_value(), primary_key=True, init=False)
+	id                  : int64 | None = Field(default=None, sa_column=Column(BigInteger(), primary_key=True, server_default=position_id_seq.next_value()) )
+	#id                  : int64 | None = Field(Column(BigInteger, position_id_seq, server_default=position_id_seq.next_value(), primary_key=True), primary_key=True, sa_column_kwargs={"server_default": position_id_seq.next_value()})
 
 	_fields: typing.ClassVar[list[tuple[str, typing.Callable]]] = [
 		["latitudeI"    , lambda packet: packet["decoded"]["position"]["latitudeI"]    ],
@@ -370,20 +407,17 @@ toId                    : <class 'str'> ^all
 
 
 
-textmessage_id_seq = Sequence("TextMessage_id_seq")
+textmessage_id_seq = gen_id_seq("textmessage")
 
-@reg.mapped_as_dataclass
-class TextMessage(Message):
-	__tablename__ = "TextMessage"
+class TextMessage(Message, SQLModel, table=True):
+	payload             : bytes       # b'Hi'
+	text                : str         # 'Hi'
+	channel             : int8 | None = Field(              sa_type=SmallInteger(), nullable=True) # 1     - Public Broadcast
+	wantAck             : bool | None # True, - Direct Message
+	publicKey           : str  | None # 'zd9' - Direct Message
+	pkiEncrypted        : bool | None # True  - Direct Message
 
-	payload     : Mapped[bytes]       # b'Hi'
-	text        : Mapped[str  ]       # 'Hi'
-	channel     : Mapped[int8 | None] # 1     - Public Broadcast
-	wantAck     : Mapped[bool | None] # True, - Direct Message
-	publicKey   : Mapped[str  | None] # 'zd9' - Direct Message
-	pkiEncrypted: Mapped[bool | None] # True  - Direct Message
-
-	id          : Mapped[int64] = mapped_column(BigInteger, textmessage_id_seq, server_default=textmessage_id_seq.next_value(), primary_key=True, init=False)
+	id                  : int64 | None = Field(Column(BigInteger, textmessage_id_seq, server_default=textmessage_id_seq.next_value(), primary_key=True), primary_key=True, sa_column_kwargs={"server_default": textmessage_id_seq.next_value()})
 
 	_fields: typing.ClassVar[list[tuple[str, typing.Callable]]] = [
 		["payload"     , lambda packet: packet["decoded"]["payload"]     ],
@@ -463,16 +497,13 @@ toId                    : <class 'str'> ^all
 
 
 
-rangetest_id_seq = Sequence("RangeTest_id_seq")
+rangetest_id_seq = gen_id_seq("rangetest")
 
-@reg.mapped_as_dataclass
-class RangeTest(Message):
-	__tablename__ = "RangeTest"
+class RangeTest(Message, SQLModel, table=True):
+	payload             : bytes # b'Hi'
+	text                : str   # 'Hi'
 
-	payload             : Mapped[bytes]     # b'Hi'
-	text                : Mapped[str  ]     # 'Hi'
-
-	id                  : Mapped[int64] = mapped_column(BigInteger, rangetest_id_seq, server_default=rangetest_id_seq.next_value(), primary_key=True, init=False)
+	id                  : int64 | None = Field(Column(BigInteger, rangetest_id_seq, server_default=rangetest_id_seq.next_value(), primary_key=True), primary_key=True, sa_column_kwargs={"server_default": rangetest_id_seq.next_value()})
 
 	_fields: typing.ClassVar[list[tuple[str, typing.Callable]]] = [
 		["payload"     , lambda packet: packet["decoded"]["payload"]     ],
@@ -499,60 +530,61 @@ toId                    : <class 'str'> ^all
 
 
 
-nodes_id_seq = Sequence("nodes_id_seq")
 
-@reg.mapped_as_dataclass
-class Nodes(Fields):
-	__tablename__ = "Nodes"
 
-	hopsAway            : Mapped[int8  | None]  # 0
-	lastHeard           : Mapped[int64]         # 1700000000
-	num                 : Mapped[int64]         # 24
-	snr                 : Mapped[float]         # 16.0
-	isFavorite          : Mapped[bool  | None]  # True
+nodes_id_seq = gen_id_seq("nodes")
 
-	airUtilTx           : Mapped[float]         # 3.1853054
-	batteryLevel        : Mapped[int8 ]         # 64
-	channelUtilization  : Mapped[float]         # 0.0
-	uptimeSeconds       : Mapped[int64]         # 16792
-	voltage             : Mapped[float]         # 3.836
+class Nodes(SQLModelFields, SQLModel, table=True):
+	hopsAway            : int8  | None  = Field( default=None, sa_type=SmallInteger(), nullable=True ) # 0
+	lastHeard           : int64 | None  = Field( default=None, sa_type=BigInteger()  , nullable=True ) # 1700000000
+	num                 : int64         = Field(               sa_type=BigInteger()  , nullable=False) # 24
+	snr                 : float         # 16.0
+	isFavorite          : bool  | None  # True
 
-	altitude            : Mapped[int16 | None]  # 18
-	latitude            : Mapped[float | None]  # 52.0000000
-	latitudeI           : Mapped[int32 | None]  #  520000000
-	longitude           : Mapped[float | None]  #  4.0000000
-	longitudeI          : Mapped[int32 | None]  #   48000000
-	time                : Mapped[int64]         #  170000000
+	airUtilTx           : float | None  # 3.1853054
+	batteryLevel        : int8  | None  = Field( default=None, sa_type=SmallInteger(), nullable=True ) # 64
+	channelUtilization  : float | None  # 0.0
+	uptimeSeconds       : int64 | None  = Field( default=None, sa_type=BigInteger()  , nullable=True ) # 16792
+	voltage             : float | None  # 3.836
 
-	hwModel             : Mapped[str]           # TRACKER_T1000_E
-	user_id             : Mapped[str]           # !8fffffff
-	longName            : Mapped[str]           # Aaaaaaa
-	macaddr             : Mapped[str]           # 3Fffffff
-	publicKey           : Mapped[str]           # Ia
-	role                : Mapped[str]           # TRACKER
-	shortName           : Mapped[str]           # AAAA
+	altitude            : int16 | None  = Field( default=None, sa_type=SmallInteger(), nullable=True ) # 18
+	latitude            : float | None  # 52.0000000
+	latitudeI           : int32 | None  #  520000000
+	longitude           : float | None  #  4.0000000
+	longitudeI          : int32 | None  #   48000000
+	time                : int64 | None  = Field( default=None, sa_type=BigInteger()  , nullable=True ) #  170000000
 
-	id                  : Mapped[int64] = mapped_column(BigInteger, nodes_id_seq, server_default=nodes_id_seq.next_value(), primary_key=True, init=False)
+	hwModel             : str           # TRACKER_T1000_E
+	user_id             : str           # !8fffffff
+	longName            : str           # Aaaaaaa
+	macaddr             : str           # 3Fffffff
+	publicKey           : str           # Ia
+	role                : str           # TRACKER
+	shortName           : str           # AAAA
 
+	#id                  : int64 | None = Field(Column(BigInteger, nodes_id_seq, server_default=nodes_id_seq.next_value(), primary_key=True), primary_key=True, sa_column_kwargs={"server_default": nodes_id_seq.next_value()})
+	id                  : int64 | None = Field(primary_key=True, sa_column_kwargs={"server_default": nodes_id_seq.next_value()}, nullable=True)
+
+	_shared_fields: typing.ClassVar[list[tuple[str, typing.Callable]]] = []
 	_fields: typing.ClassVar[list[tuple[str, typing.Callable]]] = [
-		["hopsAway"          , lambda data: data.get("hopsAway", None) ],
-		["lastHeard"         , lambda data: data["lastHeard"] ],
+		["hopsAway"          , lambda data: data.get("hopsAway" , None) ],
+		["lastHeard"         , lambda data: data.get("lastHeard", None) ],
 		["num"               , lambda data: data["num"] ],
 		["snr"               , lambda data: data["snr"] ],
 		["isFavorite"        , lambda data: data.get("isFavorite", None) ],
 
-		["airUtilTx"         , lambda data: data["deviceMetrics"]["airUtilTx"]          ],
-		["batteryLevel"      , lambda data: data["deviceMetrics"]["batteryLevel"]       ],
-		["channelUtilization", lambda data: data["deviceMetrics"]["channelUtilization"] ],
-		["uptimeSeconds"     , lambda data: data["deviceMetrics"]["uptimeSeconds"]      ],
-		["voltage"           , lambda data: data["deviceMetrics"]["voltage"]            ],
+		["airUtilTx"         , lambda data: data.get("deviceMetrics", {}).get("airUtilTx"         , None)],
+		["batteryLevel"      , lambda data: data.get("deviceMetrics", {}).get("batteryLevel"      , None)],
+		["channelUtilization", lambda data: data.get("deviceMetrics", {}).get("channelUtilization", None)],
+		["uptimeSeconds"     , lambda data: data.get("deviceMetrics", {}).get("uptimeSeconds"     , None)],
+		["voltage"           , lambda data: data.get("deviceMetrics", {}).get("voltage"           , None)],
 
-		["altitude"          , lambda data: data["position"].get("altitude"  , None)],
-		["latitude"          , lambda data: data["position"].get("latitude"  , None)],
-		["latitudeI"         , lambda data: data["position"].get("latitudeI" , None)],
-		["longitude"         , lambda data: data["position"].get("longitude" , None)],
-		["longitudeI"        , lambda data: data["position"].get("longitudeI", None)],
-		["time"              , lambda data: data["position"][    "time"]            ],
+		["altitude"          , lambda data: data.get("position", {}).get("altitude"  , None)],
+		["latitude"          , lambda data: data.get("position", {}).get("latitude"  , None)],
+		["latitudeI"         , lambda data: data.get("position", {}).get("latitudeI" , None)],
+		["longitude"         , lambda data: data.get("position", {}).get("longitude" , None)],
+		["longitudeI"        , lambda data: data.get("position", {}).get("longitudeI", None)],
+		["time"              , lambda data: data.get("position", {}).get("time"      , None)],
 
 		["hwModel"           , lambda data: data["user"]["hwModel"]],
 		["user_id"           , lambda data: data["user"]["id"]],
@@ -563,16 +595,7 @@ class Nodes(Fields):
 		["shortName"         , lambda data: data["user"]["shortName"]],
 	]
 
-	@classmethod
-	def from_nodes(cls, nodes) -> "list[Node]":
-		instances = [None] * len(nodes)
-		for pos, (node_id, data) in enumerate(sorted(nodes.items())):
-			#print("node_id", node_id)
-			#print("data", data)
-			inst = cls.from_packet(data)
-			#print(inst)
-			instances[pos] = inst
-		return instances
+
 
 """
 2406480062              : <class 'dict'>

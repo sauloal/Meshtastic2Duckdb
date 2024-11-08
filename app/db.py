@@ -5,9 +5,12 @@ from sqlalchemy.orm         import registry
 from sqlalchemy.orm.session import Session
 from sqlalchemy.pool        import NullPool
 
-from sqlalchemy import create_engine
+#from sqlalchemy import create_engine
 
-import models
+from sqlmodel import Field, SQLModel, create_engine
+
+
+from . import models
 
 
 class GenericSession:
@@ -17,6 +20,15 @@ class GenericSession:
 	def commit(self):
 		raise NotImplementedError
 
+class GenericSessionManager:
+	def __init__(self, db_engine: "DbEngine"):
+		raise NotImplementedError
+
+	def __enter__(self) -> GenericSession:
+		raise NotImplementedError
+
+	def __exit__(self, type, value, traceback):
+		raise NotImplementedError
 
 
 
@@ -27,18 +39,21 @@ class DbEngine:
 
 	def add_instances(self, instances) -> dict[str, int]:
 		stats = {}
-		with self._session_manager() as session:
+		with self.get_session_manager() as session:
 			for instance in instances:
+				#print(instance, type(instance))
 				session.add(instance)
 				stats[instance.__class__.__tablename__] = stats.get(instance.__class__.__tablename__, 0) + 1
 			session.commit()
 		return stats
 
 class DbEngineHTTP(DbEngine):
-	def __init__(self, host: str, port: int, proto: str = "http"):
-		self.host  = host
-		self.port  = port
-		self.proto = proto
+	def __init__(self, db_filename: str, host: str, port: int, proto: str = "http", debug=False):
+		self.db_filename = db_filename
+		self.host        = host
+		self.port        = port
+		self.proto       = proto
+		self.debug       = debug
 
 	@property
 	def url(self) -> str:
@@ -46,23 +61,25 @@ class DbEngineHTTP(DbEngine):
 
 	@property
 	def url_add(self) -> str:
-		return f"{self.url}/api/models"
+		return f"{self.url}/api/dbs/{self.db_filename}/models"
 
 	def get_add_url(self, model_name: str) -> str:
-		return f"{self.url_add}/{model_name}"
+		return f"{self.url_add}/{model_name.lower()}"
 
-	def _session_manager(self):
+	def get_session_manager(self):
 		return DbEngineHTTP.SessionManager(self)
 
 	def post(self, instance):
-		print("POSTING", instance)
+		if self.debug: print("POSTING", instance)
+
 		table_name = instance.__class__.__tablename__
-		data       = instance.toJSON()
+		data       = instance.toDICT()
 		url        = self.get_add_url(table_name)
 
-		print("  TABLE", table_name)
-		print("  DATA ", data)
-		print("  URL  ", url)
+		if self.debug:
+			print("  TABLE", table_name)
+			print("  DATA ", data)
+			print("  URL  ", url)
 
 		try:
 			res        = requests.post(url, json = data)
@@ -71,8 +88,11 @@ class DbEngineHTTP(DbEngine):
 			print()
 			return
 
-		print("  RES  ", res)
-		print()
+		if self.debug:
+			print("  RES  ", res)
+			print("  RES  ", res.text)
+			#print("  RES  ", res.request.body)
+			print()
 
 	class Session(GenericSession):
 		def __init__(self, db_engine):
@@ -84,7 +104,7 @@ class DbEngineHTTP(DbEngine):
 		def commit(self):
 			pass
 
-	class SessionManager:
+	class SessionManager(GenericSessionManager):
 		def __init__(self, db_engine: "DbEngine"):
 			self.db_engine = db_engine
 
@@ -99,40 +119,52 @@ class DbEngineHTTP(DbEngine):
 			pass
 
 class DbEngineLocal(DbEngine):
-	def __init__(self, filename: str, memory_limit_mb: int = 500, read_only: bool = False, pooled: bool = False):
-		self.filename        = filename
+	def __init__(self, db_filename: str, memory_limit_mb: int = 500, read_only: bool = False, pooled: bool = False, echo: bool = False):
+		self.db_filename     = db_filename
 		self.memory_limit_mb = memory_limit_mb
 		self.read_only       = read_only
+		self.echo            = echo
 		self.engine          = None
 		self.Base            = None
 
-		print(f"creating database")
+		print(f"creating SQLMODEL database")
 		print(f"  creating engine")
 		self.engine          = create_engine(
-			f"duckdb:///{self.filename}",
+			f"duckdb:///{self.db_filename}",
 			connect_args = {
 				'read_only': self.read_only,
 				'config': {
 					'memory_limit': f'{memory_limit_mb}mb'
 				}
 			},
+			echo = echo,
 			**({} if pooled else {"poolclass": NullPool})
 		)
 
 		print(f"  generating base")
-		self.Base = models.reg.generate_base()
+		#self.Base = models.reg.generate_base()
 
 		print(f"  creating all")
-		self.Base.metadata.create_all(self.engine)
+		#self.Base.metadata.create_all(self.engine)
+		for sequence in models.Sequences:
+			print("    sequence", sequence)
+			try:
+				sequence.create(self.engine, checkfirst=False)
+			except:
+				pass
+
+		SQLModel.metadata.create_all(self.engine)
+
+		print(f"  created")
 
 	def __del__(self):
 		if self.engine:
 			self.engine.dispose()
 
-	def _session_manager(self):
+	def get_session_manager(self):
 		return DbEngineLocal.SessionManager(self)
 
-	class SessionManager:
+	class SessionManager(GenericSessionManager):
 		def __init__(self, db_engine: "DbEngine"):
 			self.db_engine = db_engine
 
@@ -180,13 +212,13 @@ class DbManager:
 		return models.Message.from_packet_decoded(packet)
 
 	def decode_nodes(self, nodes):
-		instances = models.Nodes.from_nodes(nodes)
+		instances       = models.Nodes.from_nodes(nodes)
 		self.num_nodes += len(instances)
 		return instances
 
 	def add_instances(self, instances):
-		res = self.db_engine.add_instances(instances)
-		self.num_adds += len(instances)
+		res              = self.db_engine.add_instances(instances)
+		self.num_adds   += len(instances)
 		self.class_stats = { k: self.class_stats.get(k,0) + v for k,v in res.items() }
 
 	@property

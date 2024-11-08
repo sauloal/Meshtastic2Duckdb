@@ -7,7 +7,8 @@ import meshtastic.serial_interface
 from pubsub import pub
 
 
-import db
+from app import db
+#import db
 import nodes
 
 # https://python.meshtastic.org/#example-usage
@@ -117,9 +118,16 @@ class Subscribers:
 	def on_nodes(self, nodes):
 		self.db_manager.add_instances(nodes)
 
-def main(db_filename: str, print_stats_every=60, debug=False, trace=False):
-	#db_engine   = db.DbEngineLocal(db_filename)
-	db_engine   = db.DbEngineHTTP(host="127.0.0.1", port=1234)
+def main(*, db_filename: str, host: str|None, port: int|None, print_stats_every=60, debug=False, trace=False):
+	if db_filename is None:
+		raise ValueError("No filename defined")
+
+	if host is not None and port is not None:
+		print("Remote file")
+		db_engine   = db.DbEngineHTTP(db_filename=db_filename, host=host, port=port)
+	else:
+		print("Local file")
+		db_engine   = db.DbEngineLocal(db_filename=db_filename)
 
 	db_manager  = db.DbManager(db_engine)
 
@@ -128,7 +136,7 @@ def main(db_filename: str, print_stats_every=60, debug=False, trace=False):
 	# By default will try to find a meshtastic device, otherwise provide a device path like /dev/ttyUSB0
 
 	# https://python.meshtastic.org/serial_interface.html
-	interface  = meshtastic.serial_interface.SerialInterface()
+	interface   = meshtastic.serial_interface.SerialInterface()
 	#print_interface(interface)
 
 	loop_num = 0
@@ -157,12 +165,21 @@ def main(db_filename: str, print_stats_every=60, debug=False, trace=False):
 
 if __name__ == "__main__":
 	db_filename       = "meshtastic_logger.duckdb"
+
+	host              = None
+	port              = None
+	if True:
+		host      = "127.0.0.1"
+		port      = 8000
+
 	print_stats_every = 60
 	debug             = False
 	trace             = False
 
 	main(
-		db_filename,
+		db_filename       = db_filename,
+		host              = host,
+		port              = port,
 		print_stats_every = print_stats_every,
 		debug             = debug,
 		trace             = trace

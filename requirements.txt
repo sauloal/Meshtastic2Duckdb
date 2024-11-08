@@ -6,4 +6,4 @@ SQLAlchemy
 duckdb-engine
 
 fastapi[standard]
-
+sqlmodel
