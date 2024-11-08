@@ -2,6 +2,8 @@ API_HOST=127.0.0.1
 API_PORT=8000
 API_DB_FILE=meshtastic_logger.duckdb
 
+.SHELL:=/bin/bash
+
 all: help
 
 help:
@@ -16,11 +18,13 @@ help:
 	@echo install
 	@echo
 	@echo dump
+	@echo schema
+	@echo
 
 .PHONY: server server-dev openapi curl
 .PHONY: logger
 .PHONY: venv install
-.PHONY: dump
+.PHONY: dump schema
 
 server:
 	. .venv/bin/activate && fastapi run app/main.py
@@ -57,4 +61,14 @@ install:
 
 
 dump:
-	. .venv/bin/activate && echo .dump | duckdb $(API_DB_FILE)
+	export TS=`date +%s` ; \
+	. .venv/bin/activate && echo .dump   | duckdb $(API_DB_FILE) > /tmp/$(API_DB_FILE)_$${TS} ; \
+	cat /tmp/$(API_DB_FILE)_$${TS} ; \
+	rm  /tmp/$(API_DB_FILE)_$${TS}
+
+schema:
+	export TS=`date +%s` ; \
+	. .venv/bin/activate && echo .schema | duckdb $(API_DB_FILE) > /tmp/$(API_DB_FILE)_$${TS} ; \
+	cat /tmp/$(API_DB_FILE)_$${TS} ; \
+	rm  /tmp/$(API_DB_FILE)_$${TS}
+

@@ -1,13 +1,13 @@
 import sys
 import requests
 
-from sqlalchemy.orm         import registry
-from sqlalchemy.orm.session import Session
+from typing import Annotated, Generator
+
 from sqlalchemy.pool        import NullPool
 
 #from sqlalchemy import create_engine
 
-from sqlmodel import Field, SQLModel, create_engine
+from sqlmodel import SQLModel, create_engine, Session
 
 
 from . import models
@@ -35,6 +35,9 @@ class GenericSessionManager:
 
 class DbEngine:
 	def __int__():
+		raise NotImplementedError
+
+	def get_session_manager(self):
 		raise NotImplementedError
 
 	def add_instances(self, instances) -> dict[str, int]:
@@ -176,12 +179,9 @@ class DbEngineLocal(DbEngine):
 
 		def __exit__(self, type, value, traceback):
 			#print(f"  closing session")
+			self.session.commit()
 			self.session.close()
-
-
-
-
-
+			del self.session
 
 
 
@@ -209,10 +209,10 @@ class DbManager:
 
 	def decode_packet(self, packet):
 		self.num_messages += 1
-		return models.Message.from_packet_decoded(packet)
+		return models.decode_packet(packet)
 
 	def decode_nodes(self, nodes):
-		instances       = models.Nodes.from_nodes(nodes)
+		instances       = models.decode_nodes(nodes)
 		self.num_nodes += len(instances)
 		return instances
 
@@ -231,3 +231,38 @@ class DbManager:
 			},
 			**self.class_stats
 		}
+
+
+
+
+
+from functools import lru_cache
+from typing import Annotated
+from fastapi import Depends
+
+@lru_cache(maxsize=None)
+def get_engine(db_name: str):
+	db_engine   = DbEngineLocal(db_filename=db_name)
+	return db_engine
+
+
+# https://fastapi.tiangolo.com/tutorial/sql-databases/#create-a-session-dependency
+def get_session_manager(db_name: str, read_only:bool) -> Generator[GenericSessionManager, None, None]:
+	#with get_engine(db_name):
+	#	yield db
+	#	#db.close()
+	#with self._session_manager() as session:
+	engine = get_engine(db_name)
+	with engine.get_session_manager() as session_manager:
+		yield session_manager
+
+def get_session_manager_readonly(db_name: str) -> Generator[GenericSessionManager, None, None]:
+	for session_manager in get_session_manager(db_name, read_only=True):
+		yield session_manager
+
+def get_session_manager_readwrite(db_name: str) -> Generator[GenericSessionManager, None, None]:
+	for session_manager in get_session_manager(db_name, read_only=False):
+		yield session_manager
+
+SessionManagerDepRO = Annotated[GenericSessionManager, Depends(get_session_manager_readonly )]
+SessionManagerDepRW = Annotated[GenericSessionManager, Depends(get_session_manager_readwrite)]
