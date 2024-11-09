@@ -8,8 +8,6 @@ from pubsub import pub
 
 
 from app import db
-#import db
-import nodes
 
 # https://python.meshtastic.org/#example-usage
 
