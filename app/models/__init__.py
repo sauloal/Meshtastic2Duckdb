@@ -1,4 +1,6 @@
-from ._message    import MessageClass
+from ._message    import MessageClass, SharedFilter
+from ._base       import SharedFilterQuery, TimedFilterQuery
+
 from .nodeinfo    import *
 from .nodes       import *
 from .position    import *
@@ -48,3 +50,4 @@ def class_to_ORM(cls):
     # print("orm_inst      ", orm_inst)
 
     return orm_inst
+

@@ -54,8 +54,9 @@ class Telemetry(Message, SQLModel, table=True):
 	lux                 : float | None = Field(default=None, sa_type=Float()       , nullable=True  ) # 0.0
 	temperature         : float | None = Field(default=None, sa_type=Float()       , nullable=True  ) # 25.240046
 
-	# id                  : int64 | None = Field(default=None, sa_column=Column(BigInteger(), primary_key=True, server_default=telemetry_id_seq.next_value()) )
 	id                  : int64 | None = Field(primary_key=True, sa_column_kwargs={"server_default": telemetry_id_seq.next_value()}, nullable=True)
+
+
 
 """
 --------------------------------------------------
@@ -120,4 +121,3 @@ rxTime                  : <class 'int'> 364
 to                      : <class 'int'> 42
 toId                    : <class 'str'> ^all
 """
-

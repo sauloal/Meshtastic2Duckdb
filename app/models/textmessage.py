@@ -34,7 +34,6 @@ class TextMessage(Message, SQLModel, table=True):
 	publicKey           : str   | None = Field(nullable=True , sa_type=Text()         ) # 'zd9' - Direct Message
 	pkiEncrypted        : bool  | None = Field(nullable=True , sa_type=Boolean()      ) # True  - Direct Message
 
-	# id                  : int64 | None = Field(Column(BigInteger, textmessage_id_seq, server_default=textmessage_id_seq.next_value(), primary_key=True), primary_key=True, sa_column_kwargs={"server_default": textmessage_id_seq.next_value()})
 	id                  : int64 | None = Field(primary_key=True, sa_column_kwargs={"server_default": textmessage_id_seq.next_value()}, nullable=True)
 
 """

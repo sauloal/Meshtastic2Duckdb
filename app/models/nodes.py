@@ -94,7 +94,6 @@ class Nodes(SQLModel, table=True):
 	role                : str = Field(nullable=False, sa_type=Text() ) # TRACKER
 	shortName           : str = Field(nullable=False, sa_type=Text() ) # AAAA
 
-	#id                  : int64 | None = Field(Column(BigInteger, nodes_id_seq, server_default=nodes_id_seq.next_value(), primary_key=True), primary_key=True, sa_column_kwargs={"server_default": nodes_id_seq.next_value()})
 	id                  : int64 | None = Field(primary_key=True, sa_column_kwargs={"server_default": nodes_id_seq.next_value()}, nullable=True)
 
 

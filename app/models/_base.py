@@ -10,9 +10,16 @@ from sqlalchemy             import BigInteger, SmallInteger, Integer, Text, Floa
 # from sqlalchemy.orm         import mapped_column
 # from sqlalchemy.orm         import registry
 
+from fastapi import Depends, Query
+
 import pydantic
+from pydantic import BaseModel
+
+from typing import Annotated, Generator, Literal
+
 from sqlmodel import Field, Sequence, SQLModel, Column
-# , Session, SQLModel, create_engine, select
+from sqlmodel import select, Session
+#, SQLModel, create_engine
 
 #from sqlalchemy import Sequence
 
@@ -79,3 +86,32 @@ def gen_id_seq(name:str):
 	#return field
 	return id_seq
 
+
+
+
+
+# https://fastapi.tiangolo.com/tutorial/dependencies/classes-as-dependencies/#classes-as-dependencies_1
+class SharedFilterQueryParams(BaseModel):
+	offset  : Annotated[int       , Query(default=0  , ge=0)        ]
+	limit   : Annotated[int       , Query(default=100, gt=0, le=100)]
+	q       : Annotated[str | None, Query(default=None)             ]
+	dryrun  : Annotated[bool      , Query(default=False)            ]
+	# order_by: Literal["created_at", "updated_at"] = "created_at"
+	# group_by: Literal["created_at", "updated_at"] = "created_at"
+	# tags    : list[str] = []
+
+SharedFilterQuery = Annotated[SharedFilterQueryParams, Depends(SharedFilterQueryParams)]
+
+
+from datetime import datetime
+def get_now():
+	return datetime.timestamp(datetime.now())
+
+def get_since():
+	return datetime.timestamp(datetime.now() - datetime.timedelta(days=1))
+
+class TimedFilterQueryParams(SharedFilterQueryParams):
+	since   : Annotated[int       , Query(default_factory=get_since, ge=0)       ]
+	until   : Annotated[int       , Query(default_factory=get_now  , ge=0)       ]
+
+TimedFilterQuery = Annotated[TimedFilterQueryParams, Depends(TimedFilterQueryParams)]

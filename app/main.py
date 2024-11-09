@@ -1,15 +1,12 @@
 #!/usr/bin/env python3
 
-from typing import Annotated
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, status, Query, Depends, Request, Response
+from fastapi import FastAPI, status, Request, Response
 from fastapi.staticfiles import StaticFiles
 
-from pydantic import BaseModel
-
 from . import models
-from . db import SessionManagerDepRO, SessionManagerDepRW
+from . import db
 
 
 @asynccontextmanager
@@ -44,20 +41,6 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 
-# https://fastapi.tiangolo.com/tutorial/dependencies/classes-as-dependencies/#classes-as-dependencies_1
-class FilterQueryParams(BaseModel):
-	offset : Annotated[int       , Query(default=0  , ge=0        )]
-	limit  : Annotated[int       , Query(default=100, gt=0, le=100)]
-	q      : Annotated[str | None, Query(default=None             )]
-	#order_by: Literal["created_at", "updated_at"] = "created_at"
-	#tags    : list[str] = []
-	dryrun : Annotated[bool      , Query(default=False)]
-
-FilterQuery = Annotated[FilterQueryParams, Depends(FilterQueryParams)]
-
-
-
-
 
 @app.get("/")
 async def root():
@@ -85,14 +68,13 @@ async def api_db_models_get(db_name: str):
 
 
 
-
-async def api_model_get(  db_name: str, session_manager: SessionManagerDepRO, request: Request, response: Response, query_filter: FilterQuery ):
+async def api_model_get(  session_manager: db.SessionManagerDepRO, request: Request, response: Response, query_filter: models.SharedFilterQuery ) -> list:
 	print("api_model_get", "session_manager", session_manager, "request", request, "response", response, "query_filter", query_filter)
 	#https://fastapi.tiangolo.com/tutorial/sql-databases/#read-heroes
 	#heroes = session.exec(select(Hero).offset(offset).limit(limit)).all()
 	return []
 
-async def api_model_post( db_name: str, data, session_manager: SessionManagerDepRW, request: Request, response: Response ):
+async def api_model_post( data, session_manager: db.SessionManagerDepRW, request: Request, response: Response ) -> None:
 	# print("api_model_post", "data", data, type(data), "session_manager", session_manager, "request", request, "response", response)
 
 	orm = models.class_to_ORM(data)
@@ -103,13 +85,8 @@ async def api_model_post( db_name: str, data, session_manager: SessionManagerDep
 		session.commit()
 	# print("  STORED")
 
-	#raise HTTPException(status_code=404, detail="Item not found")
-	#return JSONResponse(
-	#	status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-	#	content=jsonable_encoder({"detail": exc.errors(), "body": exc.body}),
-	#)
-
 	return None
+
 
 
 
@@ -119,8 +96,8 @@ async def api_model_post( db_name: str, data, session_manager: SessionManagerDep
 	description          = "Get NodeInfo instances",
 	response_description = "List of NodeInfo",
 	tags                 = ["NodeInfo"])
-async def api_model_nodeinfo_get(  db_name: str,                                 session_manager: SessionManagerDepRO, request: Request, response: Response, query_filter: FilterQuery ) -> list[str]:
-	return await api_model_get(    db_name=db_name,                              session_manager=session_manager,      request=request,  response=response,  query_filter=query_filter  )
+async def api_model_nodeinfo_get(  db_name: str,                                 session_manager: db.SessionManagerDepRO, request: Request, response: Response, query_filter: models.SharedFilterQuery ) -> list[models.NodeInfoClass]:
+	return await api_model_get(                                                  session_manager=session_manager,         request=request,  response=response,  query_filter=query_filter  )
 
 @app.post("/api/dbs/{db_name}/models/nodeinfo",
 	summary              = "Add NodeInfo",
@@ -128,8 +105,8 @@ async def api_model_nodeinfo_get(  db_name: str,                                
 	response_description = "None",
 	tags                 = ["NodeInfo"],
 	status_code          = status.HTTP_201_CREATED)
-async def api_model_nodeinfo_post( db_name: str,    data: models.NodeInfoClass,  session_manager: SessionManagerDepRW, request: Request, response: Response ) -> None:
-	return await api_model_post(   db_name=db_name, data=data,                   session_manager=session_manager,      request=request,  response=response )
+async def api_model_nodeinfo_post( db_name: str,    data: models.NodeInfoClass,  session_manager: db.SessionManagerDepRW, request: Request, response: Response ) -> None:
+	return await api_model_post(                    data=data,                   session_manager=session_manager,         request=request,  response=response )
 
 
 
@@ -141,8 +118,8 @@ async def api_model_nodeinfo_post( db_name: str,    data: models.NodeInfoClass, 
 	description          = "Get Node instances",
 	response_description = "List of Nodes",
 	tags                 = ["Node"])
-async def api_model_node_get(      db_name: str,                                 session_manager: SessionManagerDepRO, request: Request, response: Response, query_filter: FilterQuery ) -> list[str]:
-	return await api_model_get(    db_name=db_name,                              session_manager=session_manager,      request=request,  response=response,  query_filter=query_filter  )
+async def api_model_node_get(      db_name: str,                                 session_manager: db.SessionManagerDepRO, request: Request, response: Response, query_filter: models.SharedFilterQuery ) -> list[models.NodesClass]:
+	return await api_model_get(                                                  session_manager=session_manager,         request=request,  response=response,  query_filter=query_filter  )
 
 @app.post("/api/dbs/{db_name}/models/nodes",
 	summary              = "Add Node",
@@ -150,8 +127,8 @@ async def api_model_node_get(      db_name: str,                                
 	response_description = "None",
 	tags                 = ["Node"],
 	status_code          = status.HTTP_201_CREATED)
-async def api_model_node_post(     db_name: str,    data: models.NodesClass,     session_manager: SessionManagerDepRW, request: Request, response: Response) -> None:
-	return await api_model_post(   db_name=db_name, data=data,                   session_manager=session_manager,      request=request,  response=response )
+async def api_model_node_post(     db_name: str,    data: models.NodesClass,     session_manager: db.SessionManagerDepRW, request: Request, response: Response) -> None:
+	return await api_model_post(                    data=data,                   session_manager=session_manager,         request=request,  response=response )
 
 
 
@@ -162,8 +139,8 @@ async def api_model_node_post(     db_name: str,    data: models.NodesClass,    
 	description="Get Telemetry instances",
 	response_description="List of Telemetries",
 	tags=["Telemetry"])
-async def api_model_node_get(      db_name: str,                                 session_manager: SessionManagerDepRO, request: Request, response: Response, query_filter: FilterQuery ) -> list[str]:
-	return await api_model_get(    db_name=db_name,                              session_manager=session_manager,      request=request,  response=response,  query_filter=query_filter  )
+async def api_model_node_get(      db_name: str,                                 session_manager: db.SessionManagerDepRO, request: Request, response: Response, query_filter: models.SharedFilterQuery ) -> list[models.TelemetryClass]:
+	return await api_model_get(                                                  session_manager=session_manager,         request=request,  response=response,  query_filter=query_filter  )
 
 @app.post("/api/dbs/{db_name}/models/telemetry",
 	summary="Add Telemetry",
@@ -171,8 +148,8 @@ async def api_model_node_get(      db_name: str,                                
 	response_description="None",
 	tags=["Telemetry"],
 	status_code=status.HTTP_201_CREATED)
-async def api_model_node_post(     db_name: str,    data: models.TelemetryClass, session_manager: SessionManagerDepRW, request: Request, response: Response ) -> None:
-	return await api_model_post(   db_name=db_name, data=data,                   session_manager=session_manager,      request=request,  response=response )
+async def api_model_node_post(     db_name: str,    data: models.TelemetryClass, session_manager: db.SessionManagerDepRW, request: Request, response: Response ) -> None:
+	return await api_model_post(                    data=data,                   session_manager=session_manager,         request=request,  response=response )
 
 
 

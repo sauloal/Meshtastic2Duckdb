@@ -20,7 +20,6 @@ class RangeTest(Message, SQLModel, table=True):
 	payload             : bytes        = Field(nullable=False, sa_type=LargeBinary()) # b'Hi'
 	text                : str          = Field(nullable=False, sa_type=Text()       ) # 'Hi'
 
-	# id                  : int64 | None = Field(Column(BigInteger, rangetest_id_seq, server_default=rangetest_id_seq.next_value(), primary_key=True), primary_key=True, sa_column_kwargs={"server_default": rangetest_id_seq.next_value()})
 	id                  : int64 | None = Field(primary_key=True, sa_column_kwargs={"server_default": rangetest_id_seq.next_value()}, nullable=True)
 
 """

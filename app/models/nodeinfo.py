@@ -34,7 +34,6 @@ class NodeInfo(Message, SQLModel, table=True):
 	role                : str          = Field(nullable=False, sa_type=Text()) # TRACKER
 	publicKey           : str          = Field(nullable=False, sa_type=Text()) # S3
 
-	# id                  : int64 | None = Field(default=None, sa_column=Column(BigInteger(), primary_key=True, server_default=nodeinfo_id_seq.next_value()) )
 	id                  : int64 | None = Field(primary_key=True, sa_column_kwargs={"server_default": nodeinfo_id_seq.next_value()}, nullable=True)
 
 """

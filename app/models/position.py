@@ -48,7 +48,6 @@ class Position(Message, SQLModel, table=True):
 	latitude            : float        = Field(              sa_type=Float()         , nullable=False )# 52
 	longitude           : float        = Field(              sa_type=Float()         , nullable=False ) #  4
 
-	# id                  : int64 | None = Field(default=None, sa_column=Column(BigInteger(), primary_key=True, server_default=position_id_seq.next_value()) )
 	id                  : int64 | None = Field(primary_key=True, sa_column_kwargs={"server_default": position_id_seq.next_value()}, nullable=True)
 
 

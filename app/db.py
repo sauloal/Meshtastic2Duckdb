@@ -1,16 +1,19 @@
 import sys
 import requests
+from functools import lru_cache
 
 from typing import Annotated, Generator
 
-from sqlalchemy.pool        import NullPool
+from sqlalchemy.pool import NullPool
 
-#from sqlalchemy import create_engine
+from fastapi import Depends
 
 from sqlmodel import SQLModel, create_engine, Session
 
-
 from . import models
+
+
+
 
 
 class GenericSession:
@@ -29,6 +32,7 @@ class GenericSessionManager:
 
 	def __exit__(self, type, value, traceback):
 		raise NotImplementedError
+
 
 
 
@@ -236,9 +240,6 @@ class DbManager:
 
 
 
-from functools import lru_cache
-from typing import Annotated
-from fastapi import Depends
 
 @lru_cache(maxsize=None)
 def get_engine(db_name: str):
@@ -248,10 +249,6 @@ def get_engine(db_name: str):
 
 # https://fastapi.tiangolo.com/tutorial/sql-databases/#create-a-session-dependency
 def get_session_manager(db_name: str, read_only:bool) -> Generator[GenericSessionManager, None, None]:
-	#with get_engine(db_name):
-	#	yield db
-	#	#db.close()
-	#with self._session_manager() as session:
 	engine = get_engine(db_name)
 	with engine.get_session_manager() as session_manager:
 		yield session_manager
@@ -266,3 +263,4 @@ def get_session_manager_readwrite(db_name: str) -> Generator[GenericSessionManag
 
 SessionManagerDepRO = Annotated[GenericSessionManager, Depends(get_session_manager_readonly )]
 SessionManagerDepRW = Annotated[GenericSessionManager, Depends(get_session_manager_readwrite)]
+
