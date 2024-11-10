@@ -5,7 +5,8 @@ services:
       context: .
     restart: unless-stopped
     volumes:
-    #- "${PWD}:/data"
+    - "${PWD}/app:/data/app"
+    - "${PWD}/logger:/data/logger"
     - "${PWD}/dbs:/data/dbs"
     - "/dev/serial/:/dev/serial"
     ports:
@@ -33,7 +34,8 @@ services:
     privileged: true
     tty: true
     volumes:
-    #- "${PWD}:/data"
+    - "${PWD}/app:/data/app"
+    - "${PWD}/logger:/data/logger"
     - "${PWD}/dbs:/data/dbs"
     depends_on:
       server:

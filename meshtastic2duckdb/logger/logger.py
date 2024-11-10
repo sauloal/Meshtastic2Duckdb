@@ -277,6 +277,8 @@ def run(*, config: Config, db_engine: db.DbEngine):
 			time.sleep(1)
 	except KeyboardInterrupt:
 		interface.close()
+	except Exception as e:
+		raise e
 
 def main():
 	config                     = Config.load_env()
