@@ -37,10 +37,10 @@ help:
 .PHONY: dump schema
 
 server:
-	 . .venv/bin/activate && fastapi run app/main.py --host="$${MESH_LOGGER_REMOTE_HTTP_HOST}" --port="$${MESH_LOGGER_REMOTE_HTTP_PORT}"
+	 . .venv/bin/activate && fastapi run app/main.py --host="$${MESH_APP_HOST}" --port="$${MESH_APP_PORT}"
 
 server-dev:
-	 . .venv/bin/activate && fastapi dev app/main.py --host="$${MESH_LOGGER_REMOTE_HTTP_HOST}" --port="$${MESH_LOGGER_REMOTE_HTTP_PORT}"
+	 . .venv/bin/activate && fastapi dev app/main.py --host="$${MESH_APP_HOST}" --port="$${MESH_APP_PORT}"
 
 openapi:
 	 curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/openapi.json" | jq -C | less -SR

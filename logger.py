@@ -196,9 +196,9 @@ class ConfigRemoteHttp:
 
 		assert proto.lower() in "http,https".split(",")
 
-		if host is not None:
-			if host.lower() != "localhost":
-				assert len(host.split(".")) == 4, "invalid host"
+		#if host is not None:
+		#	if host.lower() != "localhost":
+		#		assert len(host.split(".")) == 4, f"invalid host: {host}"
 
 		inst = cls(proto=proto, host=host, port=port)
 
