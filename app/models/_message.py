@@ -5,8 +5,8 @@ class MessageClass(ModelBaseClass):
 	from_node : int64
 	to_node   : int64
 
-	fromId    : str
-	toId      : str
+	fromId    : str   | None
+	toId      : str   | None
 
 	rxTime    : int64 | None
 	rxRssi    : int16 | None
@@ -26,8 +26,8 @@ class MessageClass(ModelBaseClass):
 		["from_node"  , lambda packet: packet["from"]                         ],
 		["to_node"    , lambda packet: packet["to"]                           ],
 
-		["fromId"     , lambda packet: packet["fromId"]                       ],
-		["toId"       , lambda packet: packet["toId"]                         ],
+		["fromId"     , lambda packet: packet.get("fromId"  , None)           ],
+		["toId"       , lambda packet: packet.get("toId"    , None)           ],
 
 		["rxTime"     , lambda packet: packet.get("rxTime"  , None)           ],
 		["rxRssi"     , lambda packet: packet.get("rxRssi"  , None)           ],

@@ -126,11 +126,12 @@ class DbEngineHTTP(DbEngine):
 			pass
 
 class DbEngineLocal(DbEngine):
-	def __init__(self, db_filename: str, memory_limit_mb: int = 64, read_only: bool = False, pooled: bool = False, echo: bool = False):
+	def __init__(self, db_filename: str, memory_limit_mb: int = 64, read_only: bool = False, pooled: bool = False, echo: bool = False, debug: bool = False):
 		self.db_filename     = db_filename
 		self.memory_limit_mb = memory_limit_mb
 		self.read_only       = read_only
 		self.echo            = echo
+		self.debug           = debug
 		self.engine          = None
 		self.Base            = None
 
@@ -151,15 +152,16 @@ class DbEngineLocal(DbEngine):
 		print(f"  generating base")
 		#self.Base = models.reg.generate_base()
 
-		print(f"  creating all")
+		print(f"  creating sequences")
 		#self.Base.metadata.create_all(self.engine)
 		for sequence in models.Sequences:
-			print("    sequence", sequence)
+			#print("    sequence", sequence)
 			try:
 				sequence.create(self.engine, checkfirst=False)
 			except:
 				pass
 
+		print(f"  creating tables")
 		SQLModel.metadata.create_all(self.engine)
 
 		print(f"  created")

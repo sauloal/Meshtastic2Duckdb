@@ -2,6 +2,8 @@
 *.duckdb
 *.old
 
+*.code-workspace
+
 .venv/
 __pycache__/
 nodes/

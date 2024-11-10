@@ -1,24 +1,33 @@
-API_HOST=127.0.0.1
-API_PORT=8000
-API_DB_FILE=meshtastic_logger.duckdb
-
 .SHELL:=/bin/bash
+
+ifeq ($${MESH_LOGGER_REMOTE_HTTP_HOST},)
+$(warning MESH_LOGGER_REMOTE_HTTP_HOST not defined)
+endif
+
+ifeq ($${MESH_LOGGER_REMOTE_HTTP_PORT},)
+$(warning MESH_LOGGER_REMOTE_HTTP_PORT not defined)
+endif
+
+ifeq ($${MESH_LOGGER_DB_FILENAME},)
+$(warning MESH_LOGGER_DB_FILENAME not defined)
+endif
 
 all: help
 
 help:
-	@echo server
-	@echo server-dev
-	@echo openapi
-	@echo curl
+	@echo "HELP"
+	@echo "  server"
+	@echo "  server-dev"
+	@echo "  openapi"
+	@echo "  curl"
 	@echo
-	@echo logger
+	@echo "  logger"
 	@echo
-	@echo venv
-	@echo install
+	@echo "  venv"
+	@echo "  install"
 	@echo
-	@echo dump
-	@echo schema
+	@echo "  dump"
+	@echo "  schema"
 	@echo
 
 .PHONY: server server-dev openapi curl
@@ -27,28 +36,28 @@ help:
 .PHONY: dump schema
 
 server:
-	. .venv/bin/activate && fastapi run app/main.py
+	export `cat config.env` && . .venv/bin/activate && fastapi run app/main.py --host="$${MESH_LOGGER_REMOTE_HTTP_HOST}" --port="$${MESH_LOGGER_REMOTE_HTTP_PORT}"
 
 server-dev:
-	. .venv/bin/activate && fastapi dev app/main.py
+	export `cat config.env` && . .venv/bin/activate && fastapi dev app/main.py --host="$${MESH_LOGGER_REMOTE_HTTP_HOST}" --port="$${MESH_LOGGER_REMOTE_HTTP_PORT}"
 
 openapi:
-	curl -v $(API_HOST):$(API_PORT)/openapi.json | jq -C | less -SR
+	export `cat config.env` && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/openapi.json" | jq -C | less -SR
 
 curl:
-	curl -v "$(API_HOST):$(API_PORT)"
-	curl -v "$(API_HOST):$(API_PORT)/api"
-	curl -v "$(API_HOST):$(API_PORT)/api/dbs"
-	curl -v "$(API_HOST):$(API_PORT)/api/dbs/$(API_DB_FILE)"
-	curl -v "$(API_HOST):$(API_PORT)/api/dbs/$(API_DB_FILE)/models"
-	curl -v "$(API_HOST):$(API_PORT)/api/dbs/$(API_DB_FILE)/models/nodes"
-	curl -v "$(API_HOST):$(API_PORT)/api/dbs/$(API_DB_FILE)/models/nodes?dry-run=true" \
+	export `cat config.env` && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}"
+	export `cat config.env` && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api"
+	export `cat config.env` && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api/dbs"
+	export `cat config.env` && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api/dbs/$${MESH_LOGGER_DB_FILENAME}"
+	export `cat config.env` && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api/dbs/$${MESH_LOGGER_DB_FILENAME}/models"
+	export `cat config.env` && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api/dbs/$${MESH_LOGGER_DB_FILENAME}/models/nodes"
+	export `cat config.env` && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api/dbs/$${MESH_LOGGER_DB_FILENAME}/models/nodes?dry-run=true" \
 		-H 'content-type: application/json' \
 		-X POST \
 		-d '{"hopsAway": 0, "lastHeard": 1731060061, "num": 4175865308, "snr": 16.5, "isFavorite": null, "airUtilTx": 3.0786943, "batteryLevel": 75, "channelUtilization": 5.9116664, "uptimeSeconds": 176372, "voltage": 3.942, "altitude": null, "latitude": null, "latitudeI": null, "longitude": null, "longitudeI": null, "time": null, "hwModel": "TRACKER_T1000_E", "user_id": "f8e6a5dc", "longName": "Saulo", "macaddr": "/pf45qXc", "publicKey": "zd9XSkmI+ptPM6H+PlReOTL2d5iCW6S/YHe3cGbQen4=", "role": "TRACKER", "shortName": "SAAA", "id": null}'
 
 logger:
-	. .venv/bin/activate && python3 logger.py
+	export `cat config.env` && . .venv/bin/activate && python3 logger.py
 
 
 
@@ -62,13 +71,13 @@ install:
 
 dump:
 	export TS=`date +%s` ; \
-	. .venv/bin/activate && echo .dump   | duckdb $(API_DB_FILE) > /tmp/$(API_DB_FILE)_$${TS} ; \
-	cat /tmp/$(API_DB_FILE)_$${TS} ; \
-	rm  /tmp/$(API_DB_FILE)_$${TS}
+	export `cat config.env` && . .venv/bin/activate && echo .dump   | duckdb $${MESH_LOGGER_DB_FILENAME} > /tmp/$${MESH_LOGGER_DB_FILENAME}_$${TS} ; \
+	cat /tmp/$${MESH_LOGGER_DB_FILENAME}_$${TS} ; \
+	rm  /tmp/$${MESH_LOGGER_DB_FILENAME}_$${TS}
 
 schema:
 	export TS=`date +%s` ; \
-	. .venv/bin/activate && echo .schema | duckdb $(API_DB_FILE) > /tmp/$(API_DB_FILE)_$${TS} ; \
-	cat /tmp/$(API_DB_FILE)_$${TS} ; \
-	rm  /tmp/$(API_DB_FILE)_$${TS}
+	export `cat config.env` && . .venv/bin/activate && echo .schema | duckdb $${MESH_LOGGER_DB_FILENAME} > /tmp/$${MESH_LOGGER_DB_FILENAME}_$${TS} ; \
+	cat /tmp/$${MESH_LOGGER_DB_FILENAME}_$${TS} ; \
+	rm  /tmp/$${MESH_LOGGER_DB_FILENAME}_$${TS}
 
