@@ -2,15 +2,13 @@ import os
 import time
 import serial
 
-import dataclasses
-
 import meshtastic
 import meshtastic.serial_interface
 
 from pubsub import pub
 
-
 from app import db
+from app.config import Config, ConfigLocal, ConfigRemoteHttp
 
 # https://python.meshtastic.org/#example-usage
 
@@ -119,131 +117,17 @@ class Subscribers:
 	def on_nodes(self, nodes):
 		self.db_manager.add_instances(nodes)
 
-@dataclasses.dataclass
-class Config:
-	mode             : str
-	db_filename      : str
-	print_stats_every: int
-	debug            : bool
-	trace            : bool
-
-	@classmethod
-	def load_env(cls):
-		db_filename       = os.environ.get("MESH_LOGGER_DB_FILENAME"          , "meshtastic_logger.duckdb")
-		mode              = os.environ.get("MESH_LOGGER_MODE"                 , "http")
-		print_stats_every = os.environ.get("MESH_LOGGER_PRINT_STATS_EVERY"    , "60")
-		debug             = os.environ.get("MESH_LOGGER_DEBUG"                , "false")
-		trace             = os.environ.get("MESH_LOGGER_TRACE"                , "false")
-
-		print_stats_every = int(print_stats_every)
-		debug             = debug.lower()     in "1,t,y,true,yes".split(",")
-		trace             = trace.lower()     in "1,t,y,true,yes".split(",")
-
-		assert db_filename
-		assert mode.lower() in "local,http".split(",")
-
-		inst              = cls(
-			db_filename       = db_filename,
-			mode              = mode,
-			print_stats_every = print_stats_every,
-			debug             = debug,
-			trace             = trace
-		)
-
-		return inst
-
-@dataclasses.dataclass
-class ConfigLocal:
-	memory_limit_mb  : int
-	read_only        : bool
-	pooled           : bool
-	echo             : bool
-
-	@classmethod
-	def load_env(cls):
-		memory_limit_mb   = os.environ.get("MESH_LOGGER_LOCAL_MEMORY_LIMIT_MB", "64")
-		read_only         = os.environ.get("MESH_LOGGER_LOCAL_READ_ONLY"      , "false")
-		pooled            = os.environ.get("MESH_LOGGER_LOCAL_POOLED"         , "true")
-		echo              = os.environ.get("MESH_LOGGER_LOCAL_SQL_ECHO"       , "false")
-
-		memory_limit_mb   = int(memory_limit_mb)
-		read_only         = read_only.lower() in "1,t,y,true,yes".split(",")
-		pooled            = pooled.lower()    in "1,t,y,true,yes".split(",")
-		echo              = echo.lower()      in "1,t,y,true,yes".split(",")
-
-		inst              = cls(
-			memory_limit_mb = memory_limit_mb,
-			read_only       = read_only,
-			pooled          = pooled,
-			echo            = echo
-		)
-
-		return inst
-
-@dataclasses.dataclass
-class ConfigRemoteHttp:
-	proto   : str
-	host    : str
-	port    : int
-
-	@classmethod
-	def load_env(cls):
-		proto             = os.environ.get("MESH_LOGGER_REMOTE_HTTP_PROTO"    , "http")
-		host              = os.environ.get("MESH_LOGGER_REMOTE_HTTP_HOST"     , "127.0.0.1")
-		port              = os.environ.get("MESH_LOGGER_REMOTE_HTTP_PORT"     , "8000")
-
-		port              = int(port)
-
-		assert proto.lower() in "http,https".split(",")
-
-		#if host is not None:
-		#	if host.lower() != "localhost":
-		#		assert len(host.split(".")) == 4, f"invalid host: {host}"
-
-		inst = cls(proto=proto, host=host, port=port)
-
-		return inst
-
 def run_local(*, config: Config, config_local: ConfigLocal):
-	print(f"db_filename      : {config.db_filename}")
-	print(f"memory_limit_mb  : {config_local.memory_limit_mb}")
-	print(f"read_only        : {config_local.read_only}")
-	print(f"pooled           : {config_local.pooled}")
-	print(f"echo             : {config_local.echo}")
+	db_engine   = db.dbEngineLocalFromConfig(config=config, config_local=config_local)
 
-	db_engine   = db.DbEngineLocal(
-		db_filename     = config.db_filename,
-		memory_limit_mb = config_local.memory_limit_mb,
-		read_only       = config_local.read_only,
-		pooled          = config_local.pooled,
-		echo            = config_local.echo,
-		debug           = config.debug
-	)
-
-	run(config, db_engine)
+	run(config=config, db_engine=db_engine)
 
 def run_remote_http(*, config: Config, config_remote_http: ConfigRemoteHttp):
-	print(f"db_filename      : {config.db_filename}")
-	print(f"proto            : {config_remote_http.proto}")
-	print(f"host             : {config_remote_http.host}")
-	print(f"port             : {config_remote_http.port}")
-
-	db_engine   = db.DbEngineHTTP(
-		db_filename = config.db_filename,
-		proto       = config_remote_http.proto,
-		host        = config_remote_http.host,
-		port        = config_remote_http.port,
-		debug       = config.debug
-	)
+	db_engine = db.DbEngineHTTPFromConfig(config=config, config_remote_http=config_remote_http)
 
 	run(config=config, db_engine=db_engine)
 
 def run(*, config: Config, db_engine: db.DbEngine):
-	print(f"mode             : {config.mode}")
-	print(f"print_stats_every: {config.print_stats_every}")
-	print(f"debug            : {config.debug}")
-	print(f"trace            : {config.trace}")
-
 	db_manager  = db.DbManager(db_engine)
 
 	subscribers = Subscribers(db_manager, debug=config.debug, trace=config.trace)

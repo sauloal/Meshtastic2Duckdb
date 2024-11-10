@@ -11,7 +11,8 @@ from fastapi import Depends
 from sqlmodel import SQLModel, create_engine, Session
 
 from . import models
-
+from . import db
+from .config import Config, ConfigLocal, ConfigRemoteHttp
 
 
 
@@ -190,6 +191,49 @@ class DbEngineLocal(DbEngine):
 			self.session.commit()
 			self.session.close()
 			del self.session
+
+
+
+
+
+def dbEngineLocalFromConfig(*, config: Config, config_local: ConfigLocal) -> DbEngine:
+	db_engine   = db.DbEngineLocal(
+		db_filename     = config.db_filename,
+		memory_limit_mb = config_local.memory_limit_mb,
+		read_only       = config_local.read_only,
+		pooled          = config_local.pooled,
+		echo            = config_local.echo,
+		debug           = config.debug
+	)
+
+	return db_engine
+
+def DbEngineHTTPFromConfig(*, config: Config, config_remote_http: ConfigRemoteHttp) -> DbEngine:
+	db_engine   = db.DbEngineHTTP(
+		db_filename = config.db_filename,
+		proto       = config_remote_http.proto,
+		host        = config_remote_http.host,
+		port        = config_remote_http.port,
+		debug       = config.debug
+	)
+
+	return db_engine
+
+
+
+
+
+def dbEngineLocalFromEnv(verbose=False) -> DbEngine:
+	config              = Config.load_env(verbose=verbose)
+	config_local        = ConfigLocal.load_env(verbose=verbose)
+	db_engine           = dbEngineLocalFromConfig(config=config, config_local=config_local)
+	return db_engine
+
+def DbEngineHTTPFromEnv(verbose=False) -> DbEngine:
+	config              = Config.load_env(verbose=verbose)
+	config_remote_http  = ConfigRemoteHttp.load_env(verbose=verbose)
+	db_engine           = DbEngineHTTPFromConfig(config=config, config_remote_http=config_remote_http)
+	return db_engine
 
 
 

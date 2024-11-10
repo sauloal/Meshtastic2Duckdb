@@ -5,9 +5,9 @@ services:
       context: .
     restart: unless-stopped
     volumes:
-    - "${PWD}/app:/data/app"
-    - "${PWD}/logger:/data/logger"
-    - "${PWD}/dbs:/data/dbs"
+    # FOR DEV ONLY
+    #- "${PWD}/meshtastic2duckdb:/data/meshtastic2duckdb"
+    - "${PWD}/meshtastic2duckdb/app/dbs/:/data/meshtastic2duckdb/app/dbs/"
     - "/dev/serial/:/dev/serial"
     ports:
     - "8000:8000"
@@ -33,10 +33,11 @@ services:
     restart: unless-stopped
     privileged: true
     tty: true
-    volumes:
-    - "${PWD}/app:/data/app"
-    - "${PWD}/logger:/data/logger"
-    - "${PWD}/dbs:/data/dbs"
+    #volumes:
+    # FOR DEV ONLY
+    #- "${PWD}/meshtastic2duckdb:/data/meshtastic2duckdb"
+    # FOR LOCAL STORAGE MODE
+    #- "${PWD}/meshtastic2duckdb/app/dbs/:/data/meshtastic2duckdb/app/dbs/"
     depends_on:
       server:
         condition: service_healthy
