@@ -9,6 +9,9 @@ from . import models
 from . import db
 
 
+
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
 	# Load the ML model
@@ -23,6 +26,30 @@ def on_startup(app):
 
 def on_cleanup(app):
 	pass
+
+
+
+
+
+# https://github.com/encode/starlette/issues/864
+class EndpointFilter(logging.Filter):
+	def __init__(
+		self,
+		path: str,
+		*args: t.Any,
+		**kwargs: t.Any,
+	):
+		super().__init__(*args, **kwargs)
+		self._path = path
+
+	def filter(self, record: logging.LogRecord) -> bool:
+		return record.getMessage().find(self._path) == -1
+
+uvicorn_logger = logging.getLogger("uvicorn.access")
+uvicorn_logger.addFilter(EndpointFilter(path="/livez"))
+uvicorn_logger.addFilter(EndpointFilter(path="/readyz"))
+
+
 
 
 app = FastAPI(
@@ -44,6 +71,14 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/")
 async def root():
+	return ""
+
+@app.get("/livez")
+async def livez():
+	return ""
+
+@app.get("/readyz")
+async def readyz():
 	return ""
 
 @app.get("/api")

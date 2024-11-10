@@ -3,6 +3,7 @@ services:
     image: meshtastic2duckdb:latest
     build:
       context: .
+    restart: unless-stopped
     volumes:
     #- "${PWD}:/data"
     - "${PWD}/dbs:/data/dbs"
@@ -19,15 +20,24 @@ services:
       MESH_APP_PORT: 8000
     domainname: meshtastic
     hostname: server
+    healthcheck:
+      test: curl --fail http://localhost:8000/livez || exit 1
+      interval: 10s
+      timeout: 30s
+      retries: 3
+      start_period: 5s
 
   logger:
     image: meshtastic2duckdb:latest
+    restart: unless-stopped
     privileged: true
+    tty: true
     volumes:
     #- "${PWD}:/data"
     - "${PWD}/dbs:/data/dbs"
     depends_on:
-    - server
+      server:
+        condition: service_healthy
     networks:
     - meshtastic
     env_file:
@@ -35,6 +45,7 @@ services:
     environment:
       MESH_LOGGER_REMOTE_HTTP_HOST: server
       MESH_LOGGER_REMOTE_HTTP_PORT: 8000
+      PYTHONUNBUFFERED: 0
     command: ["make", "logger"]
     domainname: meshtastic
     hostname: logger

@@ -30,6 +30,15 @@ help:
 	@echo "  install"
 	@echo "  build"
 	@echo
+	@echo "  docker-build"
+	@echo "  docker-config"
+	@echo "  docker-up"
+	@echo "  docker-down"
+	@echo "  docker-logs"
+	@echo "  docker-ps"
+	@echo "  docker-run-logger"
+	@echo "  docker-run-server"
+	@echo
 
 .PHONY: server server-dev openapi curl
 .PHONY: logger
@@ -82,7 +91,11 @@ schema:
 	cat /tmp/$${MESH_LOGGER_DB_FILENAME}_$${TS} ; \
 	rm  /tmp/$${MESH_LOGGER_DB_FILENAME}_$${TS}
 
-build:
+
+
+.PHONY: docker-build docker-config docker-up docker-down docker-logs docker-ps docker-run-logger docker-run-server
+
+docker-build:
 	docker compose build
 
 docker-config:
@@ -97,3 +110,11 @@ docker-down:
 docker-logs:
 	docker compose logs -f
 
+docker-ps:
+	docker compose ps
+
+docker-run-logger:
+	docker compose run -it --rm --no-deps logger /bin/sh
+
+docker-run-server:
+	docker compose run -it --rm --no-deps server /bin/sh
