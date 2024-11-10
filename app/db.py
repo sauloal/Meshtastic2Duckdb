@@ -138,7 +138,7 @@ class DbEngineLocal(DbEngine):
 		print(f"creating SQLMODEL database")
 		print(f"  creating engine")
 		self.engine          = create_engine(
-			f"duckdb:///{self.db_filename}",
+			f"duckdb:///dbs/{self.db_filename}",
 			connect_args = {
 				'read_only': self.read_only,
 				'config': {

@@ -18,6 +18,10 @@ source .venv/bin/activate
 pip3 install --upgrade -r requirements.txt
 ```
 
+### Install Docker
+
+	https://docs.docker.com/engine/install/ubuntu/
+
 ## Test
 
 ```bash

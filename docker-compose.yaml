@@ -1,0 +1,43 @@
+services:
+  server:
+    image: meshtastic2duckdb:latest
+    build:
+      context: .
+    volumes:
+    #- "${PWD}:/data"
+    - "${PWD}/dbs:/data/dbs"
+    - "/dev/serial/:/dev/serial"
+    ports:
+    - "8000:8000"
+    networks:
+    - meshtastic
+    env_file:
+    - config.env
+    command: ["make", "server"]
+    environment:
+      MESH_APP_HOST: "0.0.0.0"
+      MESH_APP_PORT: 8000
+    domainname: meshtastic
+    hostname: server
+
+  logger:
+    image: meshtastic2duckdb:latest
+    privileged: true
+    volumes:
+    #- "${PWD}:/data"
+    - "${PWD}/dbs:/data/dbs"
+    depends_on:
+    - server
+    networks:
+    - meshtastic
+    env_file:
+    - config.env
+    environment:
+      MESH_LOGGER_REMOTE_HTTP_HOST: server
+      MESH_LOGGER_REMOTE_HTTP_PORT: 8000
+    command: ["make", "logger"]
+    domainname: meshtastic
+    hostname: logger
+
+networks:
+  meshtastic:
