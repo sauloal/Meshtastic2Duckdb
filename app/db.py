@@ -126,7 +126,7 @@ class DbEngineHTTP(DbEngine):
 			pass
 
 class DbEngineLocal(DbEngine):
-	def __init__(self, db_filename: str, memory_limit_mb: int = 64, read_only: bool = False, pooled: bool = False, echo: bool = False, debug: bool = False):
+	def __init__(self, db_filename: str, memory_limit_mb: int = 64, threads: int = 1, read_only: bool = False, pooled: bool = False, echo: bool = False, debug: bool = False):
 		self.db_filename     = db_filename
 		self.memory_limit_mb = memory_limit_mb
 		self.read_only       = read_only
@@ -142,7 +142,9 @@ class DbEngineLocal(DbEngine):
 			connect_args = {
 				'read_only': self.read_only,
 				'config': {
-					'memory_limit': f'{memory_limit_mb}mb'
+					'memory_limit': f'{memory_limit_mb}mb',
+					'max_memory': f'{memory_limit_mb}mb',
+					'threads'     : threads
 				}
 			},
 			echo = echo,
