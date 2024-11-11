@@ -21,6 +21,7 @@ help:
 	@echo
 	@echo "  docker-build"
 	@echo "  docker-config"
+	@echo "  docker-restart"
 	@echo "  docker-up"
 	@echo "  docker-down"
 	@echo "  docker-logs"
@@ -99,13 +100,15 @@ install:
 
 
 
-.PHONY: docker-build docker-config docker-up docker-down docker-logs docker-ps docker-run-logger docker-run-server
+.PHONY: docker-build docker-config docker-restart docker-up docker-down docker-logs docker-ps docker-run-logger docker-run-server
 
 docker-build:
 	docker compose build
 
 docker-config:
 	docker compose config
+
+docker-restart: docker-down docker-up
 
 docker-up:
 	docker compose up -d

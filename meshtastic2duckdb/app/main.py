@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, status, Request, Response
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse
 
 from . import models
 from . import db
@@ -67,20 +68,20 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # https://jnikenoueba.medium.com/using-fastapi-with-sqlalchemy-5cd370473fe5
 # https://fastapi.tiangolo.com/tutorial/sql-databases/#create-a-session-dependency
 # https://donnypeeters.com/blog/fastapi-sqlalchemy/
+# https://github.com/encode/starlette/blob/master/starlette/status.py
 
 
 
 
-
-@app.get("/")
+@app.get("/", response_class=HTMLResponse, status_code=status.HTTP_204_NO_CONTENT, include_in_schema=False)
 async def root():
 	return ""
 
-@app.get("/livez")
+@app.get("/livez", response_class=HTMLResponse, status_code=status.HTTP_204_NO_CONTENT, include_in_schema=False)
 async def livez():
 	return ""
 
-@app.get("/readyz")
+@app.get("/readyz", response_class=HTMLResponse, status_code=status.HTTP_204_NO_CONTENT, include_in_schema=False)
 async def readyz():
 	return ""
 
