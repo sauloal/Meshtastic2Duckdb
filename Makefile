@@ -13,8 +13,8 @@ help:
 	@echo "  openapi"
 	@echo "  curl"
 	@echo
-	@echo "  dump"
-	@echo "  schema"
+	@echo "  sql-dump"
+	@echo "  sql-schema"
 	@echo
 	@echo "  venv"
 	@echo "  install"
@@ -70,15 +70,15 @@ curl:
 
 
 
-.PHONY: dump schema
+.PHONY: sql-dump sql-schema
 
-dump:
+sql-dump:
 	export TS=`date +%s` ; \
 	. .venv/bin/activate && echo .dump   | duckdb meshtastic2duckdb/app/dbs/$${MESH_LOGGER_DB_FILENAME} > /tmp/$${MESH_LOGGER_DB_FILENAME}_$${TS} ; \
 	cat /tmp/$${MESH_LOGGER_DB_FILENAME}_$${TS} ; \
 	rm  /tmp/$${MESH_LOGGER_DB_FILENAME}_$${TS}
 
-schema:
+sq-schema:
 	export TS=`date +%s` ; \
 	. .venv/bin/activate && echo .schema | duckdb meshtastic2duckdb/app/dbs/$${MESH_LOGGER_DB_FILENAME} > /tmp/$${MESH_LOGGER_DB_FILENAME}_$${TS} ; \
 	cat /tmp/$${MESH_LOGGER_DB_FILENAME}_$${TS} ; \
@@ -127,3 +127,21 @@ docker-run-logger:
 
 docker-run-server:
 	docker compose run -it --rm --no-deps server /bin/sh
+
+
+ifneq ($(NODE),)
+dump:
+	meshtastic --serial /dev/serial/by-id/usb-Seeed_Studio_T1000-E-BOOT_* --export-config   > nodes/${NODE}.yaml
+	meshtastic --serial /dev/serial/by-id/usb-Seeed_Studio_T1000-E-BOOT_* --info            > nodes/${NODE}.info
+	meshtastic --serial /dev/serial/by-id/usb-Seeed_Studio_T1000-E-BOOT_* --nodes           > nodes/${NODE}.nodes
+	meshtastic --serial /dev/serial/by-id/usb-Seeed_Studio_T1000-E-BOOT_* --device-metadata > nodes/${NODE}.meta
+endif
+
+dump-saulo:
+	NODE=saulo  $(MAKE) dump
+
+dump-adrian:
+	NODE=adrian $(MAKE) dump
+
+dump-maria:
+	NODE=maria  $(MAKE) dump

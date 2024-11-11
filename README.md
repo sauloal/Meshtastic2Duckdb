@@ -29,9 +29,10 @@ meshtastic -h
 
 mkdir nodes/
 NODE=<NODE NAME> #e.g. mynode
-meshtastic --serial /dev/serial/by-id/usb-Seeed_Studio_T1000-E-BOOT_* --export-config > nodes/${NODE}.yaml
-meshtastic --serial /dev/serial/by-id/usb-Seeed_Studio_T1000-E-BOOT_* --info          > nodes/${NODE}.info
-meshtastic --serial /dev/serial/by-id/usb-Seeed_Studio_T1000-E-BOOT_* --nodes         > nodes/${NODE}.nodes
+meshtastic --serial /dev/serial/by-id/usb-Seeed_Studio_T1000-E-BOOT_* --export-config   > nodes/${NODE}.yaml
+meshtastic --serial /dev/serial/by-id/usb-Seeed_Studio_T1000-E-BOOT_* --info            > nodes/${NODE}.info
+meshtastic --serial /dev/serial/by-id/usb-Seeed_Studio_T1000-E-BOOT_* --nodes           > nodes/${NODE}.nodes
+meshtastic --serial /dev/serial/by-id/usb-Seeed_Studio_T1000-E-BOOT_* --device-metadata > nodes/${NODE}.meta
 
 meshtastic --serial /dev/serial/by-id/usb-Seeed_Studio_T1000-E-BOOT_* --listen
 ```
