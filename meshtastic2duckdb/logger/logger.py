@@ -123,7 +123,7 @@ def run_local(*, config: Config, config_local: ConfigLocal):
 	run(config=config, db_engine=db_engine)
 
 def run_remote_http(*, config: Config, config_remote_http: ConfigRemoteHttp):
-	db_engine = db.DbEngineHTTPFromConfig(config=config, config_remote_http=config_remote_http)
+	db_engine = db.dbEngineRemoteHttpFromConfig(config=config, config_remote_http=config_remote_http)
 
 	run(config=config, db_engine=db_engine)
 

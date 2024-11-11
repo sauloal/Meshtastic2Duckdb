@@ -1,4 +1,5 @@
 import sys
+import typing
 import requests
 from functools import lru_cache
 
@@ -208,7 +209,7 @@ def dbEngineLocalFromConfig(*, config: Config, config_local: ConfigLocal) -> DbE
 
 	return db_engine
 
-def DbEngineHTTPFromConfig(*, config: Config, config_remote_http: ConfigRemoteHttp) -> DbEngine:
+def dbEngineRemoteHttpFromConfig(*, config: Config, config_remote_http: ConfigRemoteHttp) -> DbEngine:
 	db_engine   = db.DbEngineHTTP(
 		db_filename = config.db_filename,
 		proto       = config_remote_http.proto,
@@ -223,16 +224,16 @@ def DbEngineHTTPFromConfig(*, config: Config, config_remote_http: ConfigRemoteHt
 
 
 
-def dbEngineLocalFromEnv(verbose=False) -> DbEngine:
-	config              = Config.load_env(verbose=verbose)
-	config_local        = ConfigLocal.load_env(verbose=verbose)
+def dbEngineLocalFromEnv(*, overrides: dict[str, typing.Any] = None, verbose: bool = False) -> DbEngine:
+	config              = Config     .load_env(overrides=overrides, verbose=verbose)
+	config_local        = ConfigLocal.load_env(overrides=overrides, verbose=verbose)
 	db_engine           = dbEngineLocalFromConfig(config=config, config_local=config_local)
 	return db_engine
 
-def DbEngineHTTPFromEnv(verbose=False) -> DbEngine:
-	config              = Config.load_env(verbose=verbose)
-	config_remote_http  = ConfigRemoteHttp.load_env(verbose=verbose)
-	db_engine           = DbEngineHTTPFromConfig(config=config, config_remote_http=config_remote_http)
+def dbEngineRemoteHttpFromEnv(*, overrides: dict[str, typing.Any] = None, verbose : bool = False) -> DbEngine:
+	config              = Config          .load_env(overrides=overrides, verbose=verbose)
+	config_remote_http  = ConfigRemoteHttp.load_env(overrides=overrides, verbose=verbose)
+	db_engine           = dbEngineRemoteHttpFromConfig(config=config, config_remote_http=config_remote_http)
 	return db_engine
 
 
@@ -291,7 +292,8 @@ class DbManager:
 
 @lru_cache(maxsize=None)
 def get_engine(db_name: str):
-	db_engine   = DbEngineLocal(db_filename=db_name)
+	#db_engine   = DbEngineLocal(db_filename=db_name)
+	db_engine   = dbEngineLocalFromEnv(verbose=False)
 	return db_engine
 
 

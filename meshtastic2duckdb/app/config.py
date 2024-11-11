@@ -1,4 +1,5 @@
 import os
+import typing
 
 import dataclasses
 
@@ -11,7 +12,7 @@ class Config:
 	trace            : bool
 
 	@classmethod
-	def load_env(cls):
+	def load_env(cls, overrides: dict[str, typing.Any] = None):
 		db_filename       = os.environ.get("MESH_LOGGER_DB_FILENAME"          , "meshtastic_logger.duckdb")
 		mode              = os.environ.get("MESH_LOGGER_MODE"                 , "http")
 		print_stats_every = os.environ.get("MESH_LOGGER_PRINT_STATS_EVERY"    , "60")
@@ -24,6 +25,10 @@ class Config:
 
 		assert db_filename
 		assert mode.lower() in "local,http".split(",")
+
+		for k,v in (overrides if overrides else {}).items():
+			if k in locals():
+				locals()[k] = v
 
 		inst              = cls(
 			db_filename       = db_filename,
@@ -49,7 +54,7 @@ class ConfigLocal:
 	echo             : bool
 
 	@classmethod
-	def load_env(cls):
+	def load_env(cls, overrides: dict[str, typing.Any] = None):
 		memory_limit_mb   = os.environ.get("MESH_LOGGER_LOCAL_MEMORY_LIMIT_MB", "64")
 		read_only         = os.environ.get("MESH_LOGGER_LOCAL_READ_ONLY"      , "false")
 		pooled            = os.environ.get("MESH_LOGGER_LOCAL_POOLED"         , "true")
@@ -59,6 +64,10 @@ class ConfigLocal:
 		read_only         = read_only.lower() in "1,t,y,true,yes".split(",")
 		pooled            = pooled.lower()    in "1,t,y,true,yes".split(",")
 		echo              = echo.lower()      in "1,t,y,true,yes".split(",")
+
+		for k,v in (overrides if overrides else {}).items():
+			if k in locals():
+				locals()[k] = v
 
 		inst              = cls(
 			memory_limit_mb = memory_limit_mb,
@@ -81,7 +90,7 @@ class ConfigRemoteHttp:
 	port    : int
 
 	@classmethod
-	def load_env(cls):
+	def load_env(cls, overrides: dict[str, typing.Any] = None):
 		proto             = os.environ.get("MESH_LOGGER_REMOTE_HTTP_PROTO"    , "http")
 		host              = os.environ.get("MESH_LOGGER_REMOTE_HTTP_HOST"     , "127.0.0.1")
 		port              = os.environ.get("MESH_LOGGER_REMOTE_HTTP_PORT"     , "8000")
@@ -93,6 +102,10 @@ class ConfigRemoteHttp:
 		#if host is not None:
 		#	if host.lower() != "localhost":
 		#		assert len(host.split(".")) == 4, f"invalid host: {host}"
+
+		for k,v in (overrides if overrides else {}).items():
+			if k in locals():
+				locals()[k] = v
 
 		inst = cls(proto=proto, host=host, port=port)
 
