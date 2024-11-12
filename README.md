@@ -6,6 +6,8 @@ Source: <https://github.com/sauloal/Meshtastic2Duckdb>
 
 
 ```bash
+sudo apt install -y make python3-venv curl unzip
+
 make venv
 make install
 ```

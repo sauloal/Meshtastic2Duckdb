@@ -81,13 +81,17 @@ curl:
 
 sql-dump:
 	export TS=`date +%s` ; \
-	. .venv/bin/activate && echo .dump   | duckdb meshtastic2duckdb/app/dbs/$${MESH_LOGGER_DB_FILENAME} > /tmp/$${MESH_LOGGER_DB_FILENAME}_$${TS} ; \
+	. ./.venv/bin/activate && \
+	. ./config.env && \
+	echo .dump   | duckdb -readonly meshtastic2duckdb/app/dbs/$${MESH_LOGGER_DB_FILENAME} > /tmp/$${MESH_LOGGER_DB_FILENAME}_$${TS} ; \
 	cat /tmp/$${MESH_LOGGER_DB_FILENAME}_$${TS} ; \
 	rm  /tmp/$${MESH_LOGGER_DB_FILENAME}_$${TS}
 
-sq-schema:
+sql-schema:
 	export TS=`date +%s` ; \
-	. .venv/bin/activate && echo .schema | duckdb meshtastic2duckdb/app/dbs/$${MESH_LOGGER_DB_FILENAME} > /tmp/$${MESH_LOGGER_DB_FILENAME}_$${TS} ; \
+	. ./.venv/bin/activate && \
+	. ./config.env && \
+	echo .schema | duckdb -readonly meshtastic2duckdb/app/dbs/$${MESH_LOGGER_DB_FILENAME} > /tmp/$${MESH_LOGGER_DB_FILENAME}_$${TS} ; \
 	cat /tmp/$${MESH_LOGGER_DB_FILENAME}_$${TS} ; \
 	rm  /tmp/$${MESH_LOGGER_DB_FILENAME}_$${TS}
 
@@ -102,7 +106,11 @@ venv:
 
 install:
 	. .venv/bin/activate && pip3 install -r requirements.txt
-
+	rm duckdb_cli-linux-aarch64.zip || true;
+	wget https://github.com/duckdb/duckdb/releases/download/v1.1.3/duckdb_cli-linux-aarch64.zip
+	unzip duckdb_cli-linux-aarch64.zip
+	mv -v duckdb .venv/bin/
+	rm duckdb_cli-linux-aarch64.zip
 
 
 
