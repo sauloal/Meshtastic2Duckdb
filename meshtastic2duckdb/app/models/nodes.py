@@ -66,7 +66,7 @@ class NodesClass(ModelBaseClass):
 
 
 nodes_id_seq = gen_id_seq("nodes")
-class Nodes(SQLModel, table=True):
+class Nodes(ModelBase, SQLModel, table=True):
 	hopsAway            : int8  | None  = Field( default=None, sa_type=SmallInteger(), nullable=True ) # 0
 	lastHeard           : int64 | None  = Field( default=None, sa_type=BigInteger()  , nullable=True ) # 1700000000
 	num                 : int64         = Field(               sa_type=BigInteger()  , nullable=False) # 24

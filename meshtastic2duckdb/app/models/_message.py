@@ -46,7 +46,7 @@ class MessageClass(ModelBaseClass):
 
 
 
-class Message(SQLModel):
+class Message(ModelBase, SQLModel):
 	from_node : int64        = Field(              sa_type=BigInteger()  , nullable=False )
 	to_node   : int64        = Field(              sa_type=BigInteger()  , nullable=False )
 

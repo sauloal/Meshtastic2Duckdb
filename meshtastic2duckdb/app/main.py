@@ -112,13 +112,16 @@ async def api_models_get():
 
 
 
-async def api_model_get(        session_manager: db.SessionManagerDepRO, request: Request, response: Response, query_filter: models.SharedFilterQuery ) -> list:
-	print("api_model_get", "session_manager", session_manager, "request", request, "response", response, "query_filter", query_filter)
+async def api_model_get( model: models.Message,      session_manager: db.SessionManagerDepRO, request: Request, response: Response, query_filter: models.SharedFilterQuery ) -> list:
+	print("api_model_get", "model", model, "session_manager", session_manager, "request", request, "response", response, "query_filter", query_filter)
 	#https://fastapi.tiangolo.com/tutorial/sql-databases/#read-heroes
-	#heroes = session.exec(select(Hero).offset(offset).limit(limit)).all()
-	return []
 
-async def api_model_post( data, session_manager: db.SessionManagerDepRW, request: Request, response: Response ) -> None:
+	print(model, type(model), dir(model))
+	resp = model.Query(session_manager=session_manager, query_filter=query_filter)
+
+	return resp
+
+async def api_model_post( data: models.MessageClass, session_manager: db.SessionManagerDepRW, request: Request, response: Response ) -> None:
 	# print("api_model_post", "data", data, type(data), "session_manager", session_manager, "request", request, "response", response)
 
 	orm = models.class_to_ORM(data)
@@ -141,7 +144,7 @@ async def api_model_post( data, session_manager: db.SessionManagerDepRW, request
 	response_description = "List of NodeInfo",
 	tags                 = ["NodeInfo"])
 async def api_model_nodeinfo_get(                                session_manager: db.SessionManagerDepRO, request: Request, response: Response, query_filter: models.SharedFilterQuery ) -> list[models.NodeInfoClass]:
-	return await api_model_get(                              session_manager=session_manager,         request=request,  response=response,  query_filter=query_filter  )
+	return await api_model_get(model=models.NodeInfo,        session_manager=session_manager,         request=request,  response=response,  query_filter=query_filter  )
 
 @app.post("/api/models/nodeinfo",
 	summary              = "Add NodeInfo",
@@ -163,7 +166,7 @@ async def api_model_nodeinfo_post(  data: models.NodeInfoClass,  session_manager
 	response_description = "List of Nodes",
 	tags                 = ["Node"])
 async def api_model_node_get(                                    session_manager: db.SessionManagerDepRO, request: Request, response: Response, query_filter: models.SharedFilterQuery ) -> list[models.NodesClass]:
-	return await api_model_get(                              session_manager=session_manager,         request=request,  response=response,  query_filter=query_filter  )
+	return await api_model_get(model=models.Nodes,           session_manager=session_manager,         request=request,  response=response,  query_filter=query_filter  )
 
 @app.post("/api/models/nodes",
 	summary              = "Add Node",

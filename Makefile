@@ -1,7 +1,5 @@
 .SHELL:=/bin/bash
 
-DEBUG:=
-
 all: help
 
 help:
@@ -13,7 +11,9 @@ help:
 	@echo "  server"
 	@echo "  server-dev"
 	@echo "  openapi"
-	@echo "  curl"
+	@echo
+	@echo "  curl-get"
+	@echo "  curl-post"
 	@echo
 	@echo "  sql-dump"
 	@echo "  sql-schema"
@@ -29,13 +29,16 @@ help:
 	@echo "  docker-up"
 	@echo "  docker-up-logger"
 	@echo "  docker-up-server"
+	@echo "  docker-up-server-dev"
 	@echo "  docker-down"
 	@echo "  docker-logs"
 	@echo "  docker-ps"
 	@echo "  docker-run-logger"
 	@echo "  docker-run-server"
 	@echo
-
+	@echo "  user-dump-adrian"
+	@echo "  user-dump-saulo"
+	@echo "  user-dump-maria"
 
 
 
@@ -43,7 +46,8 @@ help:
 
 .PHONY: local-config
 .PHONY: logger
-.PHONY: server server-dev openapi curl
+.PHONY: server server-dev openapi
+.PHONY: curl-get curl-post
 
 local-config:
 	@echo 'export `cat config.env`; export `envsubst < config.env`'
@@ -64,11 +68,13 @@ server-dev:
 openapi:
 	. ./config.env && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/openapi.json" | jq -C | less -SR
 
-curl:
+curl-get:
 	. ./config.env && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}"
 	. ./config.env && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api"
 	. ./config.env && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api/models"
 	. ./config.env && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api/models/nodes"
+
+curl-post:
 	. ./config.env && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api/models/nodes?dry-run=true" \
 		-H 'content-type: application/json' \
 		-d '{"hopsAway": 0, "lastHeard": 1731060061, "num": 4175865308, "snr": 16.5, "isFavorite": null, "airUtilTx": 3.0786943, "batteryLevel": 75, "channelUtilization": 5.9116664, "uptimeSeconds": 176372, "voltage": 3.942, "altitude": null, "latitude": null, "latitudeI": null, "longitude": null, "longitudeI": null, "time": null, "hwModel": "TRACKER_T1000_E", "user_id": "f8e6a5dc", "longName": "Saulo", "macaddr": "/pf45qXc", "publicKey": "zd9XSkmI+ptPM6H+PlReOTL2d5iCW6S/YHe3cGbQen4=", "role": "TRACKER", "shortName": "SAAA", "id": null}'
@@ -115,9 +121,11 @@ install:
 
 
 
+
 .PHONY: docker-build docker-config
 .PHONY: docker-restart docker-restart-logger docker-restart-server
-.PHONY: docker-up docker-up-logger docker-up-server docker-down docker-logs docker-ps
+.PHONY: docker-up docker-up-logger docker-up-server docker-up-server-dev
+.PHONY: docker-down docker-logs docker-ps
 .PHONY: docker-run-logger docker-run-server
 
 docker-build:
@@ -126,13 +134,15 @@ docker-build:
 docker-config:
 	docker compose config
 
+
 docker-restart: docker-down docker-up
+
+docker-restart-logger:
+	docker compose stop logger; docker compose rm logger; docker compose up -d logger
 
 docker-restart-server:
 	docker compose stop server; docker compose rm server; docker compose up -d server
 
-docker-restart-logger:
-	docker compose stop logger; docker compose rm logger; docker compose up -d logger
 
 docker-up:
 	docker compose up -d
@@ -146,6 +156,7 @@ docker-up-server:
 docker-up-server-dev:
 	docker compose up -d --no-deps --remove-orphans server
 
+
 docker-down:
 	docker compose down
 
@@ -155,6 +166,7 @@ docker-logs:
 docker-ps:
 	docker compose ps
 
+
 docker-run-logger:
 	docker compose run -it --rm --no-deps --volume ./meshtastic2duckdb:/data/meshtastic2duckdb --service-ports logger /bin/bash
 
@@ -162,19 +174,23 @@ docker-run-server:
 	docker compose run -it --rm --no-deps --volume ./meshtastic2duckdb:/data/meshtastic2duckdb --service-ports server /bin/bash
 
 
+
+
+.PHONY:user-dump user-dump-adrian user-dump-maria user-dump-saulo
+
 ifneq ($(NODE),)
-dump:
+user-dump:
 	meshtastic --serial /dev/serial/by-id/usb-Seeed_Studio_T1000-E-BOOT_* --export-config   > nodes/${NODE}.yaml
 	meshtastic --serial /dev/serial/by-id/usb-Seeed_Studio_T1000-E-BOOT_* --info            > nodes/${NODE}.info
 	meshtastic --serial /dev/serial/by-id/usb-Seeed_Studio_T1000-E-BOOT_* --nodes           > nodes/${NODE}.nodes
 	meshtastic --serial /dev/serial/by-id/usb-Seeed_Studio_T1000-E-BOOT_* --device-metadata > nodes/${NODE}.meta
 endif
 
-dump-saulo:
-	NODE=saulo  $(MAKE) dump
+user-dump-adrian:
+	NODE=adrian $(MAKE) user-dump
 
-dump-adrian:
-	NODE=adrian $(MAKE) dump
+user-dump-maria:
+	NODE=maria  $(MAKE) user-dump
 
-dump-maria:
-	NODE=maria  $(MAKE) dump
+user-dump-saulo:
+	NODE=saulo  $(MAKE) user-dump

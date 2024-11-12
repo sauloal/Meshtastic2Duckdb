@@ -17,11 +17,13 @@ from pydantic import BaseModel
 
 from typing import Annotated, Generator, Literal
 
-from sqlmodel import Field, Sequence, SQLModel, Column
-from sqlmodel import select, Session
+from sqlmodel import Field, Sequence, SQLModel, Column, Session
+from sqlmodel import select
 #, SQLModel, create_engine
 
 #from sqlalchemy import Sequence
+
+from .. import db
 
 # https://docs.sqlalchemy.org/en/20/orm/dataclasses.html
 # https://docs.sqlalchemy.org/en/20/orm/declarative_tables.html
@@ -33,7 +35,7 @@ from sqlmodel import select, Session
 
 #intpk = Annotated[int, mapped_column(init=False, primary_key=True)]
 int8  = Annotated[int, SmallInteger] # https://docs.sqlalchemy.org/en/20/core/type_basics.html#sqlalchemy.types.SMALLINT
-int16 = Annotated[int, SmallInteger] 
+int16 = Annotated[int, SmallInteger]
 int32 = Annotated[int, Integer     ] # https://docs.sqlalchemy.org/en/20/core/type_basics.html#sqlalchemy.types.INT
 int64 = Annotated[int, BigInteger  ] # https://docs.sqlalchemy.org/en/20/core/type_basics.html#sqlalchemy.types.BIGINT
 
@@ -41,6 +43,22 @@ int64 = Annotated[int, BigInteger  ] # https://docs.sqlalchemy.org/en/20/core/ty
 
 
 Sequences = []
+
+
+# https://fastapi.tiangolo.com/tutorial/dependencies/classes-as-dependencies/#classes-as-dependencies_1
+class SharedFilterQueryParams(BaseModel):
+	offset  : Annotated[int       , Query(default=0  , ge=0)        ]
+	limit   : Annotated[int       , Query(default=100, gt=0, le=100)]
+	q       : Annotated[str | None, Query(default=None)             ]
+	dryrun  : Annotated[bool      , Query(default=False)            ]
+	# order_by: Literal["created_at", "updated_at"] = "created_at"
+	# group_by: Literal["created_at", "updated_at"] = "created_at"
+	# tags    : list[str] = []
+
+SharedFilterQuery = Annotated[SharedFilterQueryParams, Depends(SharedFilterQueryParams)]
+
+
+
 
 
 class ModelBaseClass(pydantic.BaseModel):
@@ -79,6 +97,18 @@ class ModelBaseClass(pydantic.BaseModel):
 
 
 
+class ModelBase:
+	@classmethod
+	def Query( cls, *, session_manager: db.GenericSessionManager, query_filter: SharedFilterQuery ) -> list:
+		print("class query", "model", cls, "session_manager", session_manager, "query_filter", query_filter)
+		# https://fastapi.tiangolo.com/tutorial/sql-databases/#read-heroes
+
+		with session_manager as session:
+			resp = session.exec(select(cls).offset(query_filter.offset).limit(query_filter.limit)).all()
+
+		return resp
+
+
 def gen_id_seq(name:str):
 	id_seq = Sequence(f"{name.lower()}_id_seq")
 	Sequences.append( id_seq )
@@ -88,19 +118,6 @@ def gen_id_seq(name:str):
 
 
 
-
-
-# https://fastapi.tiangolo.com/tutorial/dependencies/classes-as-dependencies/#classes-as-dependencies_1
-class SharedFilterQueryParams(BaseModel):
-	offset  : Annotated[int       , Query(default=0  , ge=0)        ]
-	limit   : Annotated[int       , Query(default=100, gt=0, le=100)]
-	q       : Annotated[str | None, Query(default=None)             ]
-	dryrun  : Annotated[bool      , Query(default=False)            ]
-	# order_by: Literal["created_at", "updated_at"] = "created_at"
-	# group_by: Literal["created_at", "updated_at"] = "created_at"
-	# tags    : list[str] = []
-
-SharedFilterQuery = Annotated[SharedFilterQueryParams, Depends(SharedFilterQueryParams)]
 
 
 from datetime import datetime
