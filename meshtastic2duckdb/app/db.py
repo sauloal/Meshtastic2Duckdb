@@ -57,8 +57,7 @@ class DbEngine:
 		return stats
 
 class DbEngineHTTP(DbEngine):
-	def __init__(self, db_filename: str, host: str, port: int, proto: str = "http", debug=False):
-		self.db_filename = db_filename
+	def __init__(self, host: str, port: int, proto: str = "http", debug=False):
 		self.host        = host
 		self.port        = port
 		self.proto       = proto
@@ -70,7 +69,7 @@ class DbEngineHTTP(DbEngine):
 
 	@property
 	def url_add(self) -> str:
-		return f"{self.url}/api/dbs/{self.db_filename}/models"
+		return f"{self.url}/api/models"
 
 	def get_add_url(self, model_name: str) -> str:
 		return f"{self.url_add}/{model_name.lower()}"
@@ -211,7 +210,6 @@ def dbEngineLocalFromConfig(*, config: Config, config_local: ConfigLocal) -> DbE
 
 def dbEngineRemoteHttpFromConfig(*, config: Config, config_remote_http: ConfigRemoteHttp) -> DbEngine:
 	db_engine   = db.DbEngineHTTP(
-		db_filename = config.db_filename,
 		proto       = config_remote_http.proto,
 		host        = config_remote_http.host,
 		port        = config_remote_http.port,
@@ -291,9 +289,11 @@ class DbManager:
 
 
 @lru_cache(maxsize=None)
-def get_engine(db_name: str):
+def get_engine():
+	print("DB GET_ENGINE")
 	#db_engine   = DbEngineLocal(db_filename=db_name)
 	db_engine   = dbEngineLocalFromEnv(verbose=False)
+	print("DB GET_ENGINE", db_engine)
 	return db_engine
 
 
@@ -301,17 +301,17 @@ def get_engine(db_name: str):
 
 
 # https://fastapi.tiangolo.com/tutorial/sql-databases/#create-a-session-dependency
-def get_session_manager(db_name: str, read_only:bool) -> Generator[GenericSessionManager, None, None]:
-	engine = get_engine(db_name)
+def get_session_manager(read_only:bool) -> Generator[GenericSessionManager, None, None]:
+	engine = get_engine()
 	with engine.get_session_manager() as session_manager:
 		yield session_manager
 
-def get_session_manager_readonly(db_name: str) -> Generator[GenericSessionManager, None, None]:
-	for session_manager in get_session_manager(db_name, read_only=True):
+def get_session_manager_readonly() -> Generator[GenericSessionManager, None, None]:
+	for session_manager in get_session_manager(read_only=True):
 		yield session_manager
 
-def get_session_manager_readwrite(db_name: str) -> Generator[GenericSessionManager, None, None]:
-	for session_manager in get_session_manager(db_name, read_only=False):
+def get_session_manager_readwrite() -> Generator[GenericSessionManager, None, None]:
+	for session_manager in get_session_manager(read_only=False):
 		yield session_manager
 
 SessionManagerDepRO = Annotated[GenericSessionManager, Depends(get_session_manager_readonly )]

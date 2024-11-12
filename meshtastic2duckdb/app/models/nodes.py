@@ -9,7 +9,7 @@ class NodesClass(ModelBaseClass):
 	hopsAway            : int8  | None  # 0
 	lastHeard           : int64 | None  # 1700000000
 	num                 : int64         # 24
-	snr                 : float         # 16.0
+	snr                 : float | None  # 16.0
 	isFavorite          : bool  | None  # True
 
 	airUtilTx           : float | None  # 3.1853054
@@ -35,10 +35,10 @@ class NodesClass(ModelBaseClass):
 
 	_shared_fields: typing.ClassVar[list[tuple[str, typing.Callable]]] = []
 	_fields       : typing.ClassVar[list[tuple[str, typing.Callable]]] = [
-		["hopsAway"          , lambda data: data.get("hopsAway" , None) ],
-		["lastHeard"         , lambda data: data.get("lastHeard", None) ],
+		["hopsAway"          , lambda data: data.get("hopsAway"  , None) ],
+		["lastHeard"         , lambda data: data.get("lastHeard" , None) ],
 		["num"               , lambda data: data["num"] ],
-		["snr"               , lambda data: data["snr"] ],
+		["snr"               , lambda data: data.get("snr"       , None) ],
 		["isFavorite"        , lambda data: data.get("isFavorite", None) ],
 
 		["airUtilTx"         , lambda data: data.get("deviceMetrics", {}).get("airUtilTx"         , None)],
@@ -70,7 +70,7 @@ class Nodes(SQLModel, table=True):
 	hopsAway            : int8  | None  = Field( default=None, sa_type=SmallInteger(), nullable=True ) # 0
 	lastHeard           : int64 | None  = Field( default=None, sa_type=BigInteger()  , nullable=True ) # 1700000000
 	num                 : int64         = Field(               sa_type=BigInteger()  , nullable=False) # 24
-	snr                 : float         = Field(               sa_type=Float()       , nullable=False) # 16.0
+	snr                 : float | None  = Field( default=None, sa_type=Float()       , nullable=True ) # 16.0
 	isFavorite          : bool  | None  = Field( default=None, sa_type=Boolean()     , nullable=True ) # True
 
 	airUtilTx           : float | None  = Field( default=None, sa_type=Float()       , nullable=True ) # 3.1853054

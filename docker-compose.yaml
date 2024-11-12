@@ -6,9 +6,9 @@ services:
     restart: unless-stopped
     volumes:
     # FOR DEV ONLY
-    #- "${PWD}/meshtastic2duckdb:/data/meshtastic2duckdb"
-    - "${PWD}/meshtastic2duckdb/app/dbs/:/data/meshtastic2duckdb/app/dbs/"
-    - "/dev/serial/:/dev/serial"
+    - "${PWD}/meshtastic2duckdb:/data/meshtastic2duckdb"
+    - "${PWD}/Makefile:/data/Makefile"
+    #- "${PWD}/meshtastic2duckdb/app/dbs/:/data/meshtastic2duckdb/app/dbs/"
     ports:
     - "8000:8000"
     networks:
@@ -33,9 +33,11 @@ services:
     restart: unless-stopped
     privileged: true
     tty: true
-    #volumes:
+    volumes:
+    - "/dev/serial/:/dev/serial"
     # FOR DEV ONLY
-    #- "${PWD}/meshtastic2duckdb:/data/meshtastic2duckdb"
+    - "${PWD}/meshtastic2duckdb:/data/meshtastic2duckdb"
+    - "${PWD}/Makefile:/data/Makefile"
     # FOR LOCAL STORAGE MODE
     #- "${PWD}/meshtastic2duckdb/app/dbs/:/data/meshtastic2duckdb/app/dbs/"
     depends_on:
