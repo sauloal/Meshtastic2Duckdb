@@ -11,50 +11,9 @@ from fastapi import Depends
 
 from sqlmodel import SQLModel, create_engine, Session
 
-from . import models
-from . import db
-from .config import Config, ConfigLocal, ConfigRemoteHttp
-
-
-
-
-class GenericSession:
-	def add(self, instance):
-		raise NotImplementedError
-
-	def commit(self):
-		raise NotImplementedError
-
-class GenericSessionManager:
-	def __init__(self, db_engine: "DbEngine"):
-		raise NotImplementedError
-
-	def __enter__(self) -> GenericSession:
-		raise NotImplementedError
-
-	def __exit__(self, type, value, traceback):
-		raise NotImplementedError
-
-
-
-
-
-class DbEngine:
-	def __int__():
-		raise NotImplementedError
-
-	def get_session_manager(self):
-		raise NotImplementedError
-
-	def add_instances(self, instances) -> dict[str, int]:
-		stats = {}
-		with self.get_session_manager() as session:
-			for instance in instances:
-				#print(instance, type(instance))
-				session.add(instance)
-				stats[instance.__class__.__tablename__] = stats.get(instance.__class__.__tablename__, 0) + 1
-			session.commit()
-		return stats
+from .config     import Config, ConfigLocal, ConfigRemoteHttp
+from .dbgenerics import GenericSession, GenericSessionManager, DbEngine
+from .           import models
 
 class DbEngineHTTP(DbEngine):
 	def __init__(self, host: str, port: int, proto: str = "http", debug=False):
@@ -69,7 +28,7 @@ class DbEngineHTTP(DbEngine):
 
 	@property
 	def url_add(self) -> str:
-		return f"{self.url}/api/models"
+		return f"{self.url}/api/messages"
 
 	def get_add_url(self, model_name: str) -> str:
 		return f"{self.url_add}/{model_name.lower()}"
@@ -77,7 +36,7 @@ class DbEngineHTTP(DbEngine):
 	def get_session_manager(self):
 		return DbEngineHTTP.SessionManager(self)
 
-	def post(self, instance):
+	def post(self, instance) -> dict[str, int]:
 		if self.debug: print("POSTING", instance)
 
 		table_name = instance.__class__.__tablename__
@@ -102,12 +61,14 @@ class DbEngineHTTP(DbEngine):
 			#print("  RES  ", res.request.body)
 			print()
 
+		return { table_name.upper(): 1 }
+
 	class Session(GenericSession):
 		def __init__(self, db_engine):
 			self.db_engine = db_engine
 
-		def add(self, instance):
-			self.db_engine.post(instance)
+		def add(self, instance) -> dict[str, int]:
+			return self.db_engine.post(instance)
 
 		def commit(self):
 			pass
@@ -152,9 +113,6 @@ class DbEngineLocal(DbEngine):
 			**({} if pooled else {"poolclass": NullPool})
 		)
 
-		print(f"  generating base")
-		#self.Base = models.reg.generate_base()
-
 		print(f"  creating sequences")
 		#self.Base.metadata.create_all(self.engine)
 		for sequence in models.Sequences:
@@ -173,7 +131,7 @@ class DbEngineLocal(DbEngine):
 		if self.engine:
 			self.engine.dispose()
 
-	def get_session_manager(self):
+	def get_session_manager(self) -> GenericSessionManager:
 		return DbEngineLocal.SessionManager(self)
 
 	class SessionManager(GenericSessionManager):
@@ -197,7 +155,7 @@ class DbEngineLocal(DbEngine):
 
 
 def dbEngineLocalFromConfig(*, config: Config, config_local: ConfigLocal) -> DbEngine:
-	db_engine   = db.DbEngineLocal(
+	db_engine   = DbEngineLocal(
 		db_filename     = config.db_filename,
 		memory_limit_mb = config_local.memory_limit_mb,
 		read_only       = config_local.read_only,
@@ -209,11 +167,11 @@ def dbEngineLocalFromConfig(*, config: Config, config_local: ConfigLocal) -> DbE
 	return db_engine
 
 def dbEngineRemoteHttpFromConfig(*, config: Config, config_remote_http: ConfigRemoteHttp) -> DbEngine:
-	db_engine   = db.DbEngineHTTP(
-		proto       = config_remote_http.proto,
-		host        = config_remote_http.host,
-		port        = config_remote_http.port,
-		debug       = config.debug
+	db_engine   = DbEngineHTTP(
+		proto           = config_remote_http.proto,
+		host            = config_remote_http.host,
+		port            = config_remote_http.port,
+		debug           = config.debug
 	)
 
 	return db_engine
@@ -262,7 +220,7 @@ class DbManager:
 		self.num_messages += 1
 		return models.decode_packet(packet)
 
-	def decode_nodes(self, nodes):
+	def decode_nodes(self, nodes) -> list[models.Nodes]:
 		instances       = models.decode_nodes(nodes)
 		self.num_nodes += len(instances)
 		return instances
@@ -270,17 +228,17 @@ class DbManager:
 	def add_instances(self, instances):
 		res              = self.db_engine.add_instances(instances)
 		self.num_adds   += len(instances)
-		self.class_stats = { k: self.class_stats.get(k,0) + v for k,v in res.items() }
+		for k,v in res.items(): self.class_stats[k] = self.class_stats.get(k,0) + v
 
 	@property
 	def stats(self):
 		return {
 			**{
-				"num_messages": self.num_messages,
-				"num_nodes"   : self.num_nodes   ,
-				"num_adds"    : self.num_adds
+				(1, "num_messages"): self.num_messages,
+				(1, "num_nodes"   ): self.num_nodes   ,
+				(1, "num_adds"    ): self.num_adds
 			},
-			**self.class_stats
+			**{ (2, k): v for k,v in self.class_stats.items() }
 		}
 
 

@@ -86,15 +86,15 @@ class Nodes(ModelBase, SQLModel, table=True):
 	longitudeI          : int32 | None  = Field( default=None, sa_type=Integer()     , nullable=True ) #   48000000
 	time                : int64 | None  = Field( default=None, sa_type=BigInteger()  , nullable=True ) #  170000000
 
-	hwModel             : str = Field(nullable=False, sa_type=Text() ) # TRACKER_T1000_E
-	user_id             : str = Field(nullable=False, sa_type=Text() ) # !8fffffff
-	longName            : str = Field(nullable=False, sa_type=Text() ) # Aaaaaaa
-	macaddr             : str = Field(nullable=False, sa_type=Text() ) # 3Fffffff
-	publicKey           : str = Field(nullable=False, sa_type=Text() ) # Ia
-	role                : str = Field(nullable=False, sa_type=Text() ) # TRACKER
-	shortName           : str = Field(nullable=False, sa_type=Text() ) # AAAA
+	hwModel             : str           = Field(               sa_type=Text()        , nullable=False) # TRACKER_T1000_E
+	user_id             : str           = Field(               sa_type=Text()        , nullable=False) # !8fffffff
+	longName            : str           = Field(               sa_type=Text()        , nullable=False) # Aaaaaaa
+	macaddr             : str           = Field(               sa_type=Text()        , nullable=False) # 3Fffffff
+	publicKey           : str           = Field(               sa_type=Text()        , nullable=False) # Ia
+	role                : str           = Field(               sa_type=Text()        , nullable=False) # TRACKER
+	shortName           : str           = Field(               sa_type=Text()        , nullable=False) # AAAA
 
-	id                  : int64 | None = Field(primary_key=True, sa_column_kwargs={"server_default": nodes_id_seq.next_value()}, nullable=True)
+	id                  : int64 | None  = Field(primary_key=True, sa_column_kwargs={"server_default": nodes_id_seq.next_value()}, nullable=True)
 
 
 """

@@ -12,7 +12,7 @@ class PositionClass(MessageClass):
 	time                : int64
 	PDOP                : int16
 	groundSpeed         : int8
-	groundTrack         : int8
+	groundTrack         : int64
 	satsInView          : int8
 	precisionBits       : int8
 	latitude            : float
@@ -42,7 +42,7 @@ class Position(Message, SQLModel, table=True):
 	time                : int64        = Field(              sa_type=BigInteger()    , nullable=False ) # 17
 	PDOP                : int16        = Field(              sa_type=SmallInteger()  , nullable=False ) # 272
 	groundSpeed         : int8         = Field(              sa_type=SmallInteger()  , nullable=False ) # 1
-	groundTrack         : int8         = Field(              sa_type=SmallInteger()  , nullable=False ) # 16
+	groundTrack         : int64        = Field(              sa_type=BigInteger()    , nullable=False ) # 16
 	satsInView          : int8         = Field(              sa_type=SmallInteger()  , nullable=False ) # 6
 	precisionBits       : int8         = Field(              sa_type=SmallInteger()  , nullable=False ) # 32
 	latitude            : float        = Field(              sa_type=Float()         , nullable=False )# 52

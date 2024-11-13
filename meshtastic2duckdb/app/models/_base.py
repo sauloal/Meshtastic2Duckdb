@@ -23,7 +23,7 @@ from sqlmodel import select
 
 #from sqlalchemy import Sequence
 
-from .. import db
+from .. import dbgenerics
 
 # https://docs.sqlalchemy.org/en/20/orm/dataclasses.html
 # https://docs.sqlalchemy.org/en/20/orm/declarative_tables.html
@@ -47,13 +47,15 @@ Sequences = []
 
 # https://fastapi.tiangolo.com/tutorial/dependencies/classes-as-dependencies/#classes-as-dependencies_1
 class SharedFilterQueryParams(BaseModel):
-	offset  : Annotated[int       , Query(default=0  , ge=0)        ]
-	limit   : Annotated[int       , Query(default=100, gt=0, le=100)]
-	q       : Annotated[str | None, Query(default=None)             ]
-	dryrun  : Annotated[bool      , Query(default=False)            ]
-	# order_by: Literal["created_at", "updated_at"] = "created_at"
-	# group_by: Literal["created_at", "updated_at"] = "created_at"
+	offset  : Annotated[ int                                , Query(default=0  , ge=0)         ]
+	limit   : Annotated[ int                                , Query(default=10 , gt=0, le=100) ]
+	dryrun  : Annotated[ bool                               , Query(default=False)             ]
+	order   : Annotated[ Literal["asc"       , "dsc"       ], Query(default="asc")             ]
+	# reversed: Annotated[ bool                               , Query(default=False)             ]
+	# order_by: Annotated[ Literal["created_at", "updated_at"], Query(default="created_at")      ]
+	# group_by: Annotated[ Literal["created_at", "updated_at"], Query(default="created_at")      ]
 	# tags    : list[str] = []
+	q       : Annotated[ str | None                         , Query(default=None)              ]
 
 SharedFilterQuery = Annotated[SharedFilterQueryParams, Depends(SharedFilterQueryParams)]
 
@@ -63,7 +65,7 @@ SharedFilterQuery = Annotated[SharedFilterQueryParams, Depends(SharedFilterQuery
 
 class ModelBaseClass(pydantic.BaseModel):
 	@classmethod
-	def _parse_fields(cls, packet):
+	def _parse_fields(cls, packet) -> dict[str, typing.Any]:
 		try:
 			return { k: v(packet) for k,v in cls._shared_fields + cls._fields }
 		except KeyError as e:
@@ -71,7 +73,7 @@ class ModelBaseClass(pydantic.BaseModel):
 			raise e
 
 	@classmethod
-	def from_packet(cls, packet):
+	def from_packet(cls, packet) -> "ModelBaseClass":
 		fields  = cls._parse_fields(packet)
 
 		try:
@@ -99,7 +101,7 @@ class ModelBaseClass(pydantic.BaseModel):
 
 class ModelBase:
 	@classmethod
-	def Query( cls, *, session_manager: db.GenericSessionManager, query_filter: SharedFilterQuery ) -> list:
+	def Query( cls, *, session_manager: dbgenerics.GenericSessionManager, query_filter: SharedFilterQuery ) -> "list[ModelBase]":
 		print("class query", "model", cls, "session_manager", session_manager, "query_filter", query_filter)
 		# https://fastapi.tiangolo.com/tutorial/sql-databases/#read-heroes
 
@@ -109,7 +111,7 @@ class ModelBase:
 		return resp
 
 
-def gen_id_seq(name:str):
+def gen_id_seq(name:str) -> Sequence:
 	id_seq = Sequence(f"{name.lower()}_id_seq")
 	Sequences.append( id_seq )
 	#field  = Field(Column(BigInteger, id_seq, server_default=id_seq.next_value(), primary_key=True), primary_key=True, sa_column_kwargs={"server_default": id_seq.next_value()})
@@ -121,14 +123,14 @@ def gen_id_seq(name:str):
 
 
 from datetime import datetime
-def get_now():
+def get_now() -> datetime:
 	return datetime.timestamp(datetime.now())
 
-def get_since():
+def get_since() -> datetime:
 	return datetime.timestamp(datetime.now() - datetime.timedelta(days=1))
 
 class TimedFilterQueryParams(SharedFilterQueryParams):
-	since   : Annotated[int       , Query(default_factory=get_since, ge=0)       ]
-	until   : Annotated[int       , Query(default_factory=get_now  , ge=0)       ]
+	since   : Annotated[int|None       , Query(default_factory=get_since, ge=0)       ]
+	until   : Annotated[int|None       , Query(default=None             , ge=0)       ]
 
 TimedFilterQuery = Annotated[TimedFilterQueryParams, Depends(TimedFilterQueryParams)]

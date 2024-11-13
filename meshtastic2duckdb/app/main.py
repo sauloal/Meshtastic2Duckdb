@@ -138,65 +138,128 @@ async def api_model_post( data: models.MessageClass, session_manager: db.Session
 
 
 
-@app.get("/api/models/nodeinfo",
+@app.get("/api/messages/nodeinfo",
 	summary              = "Get NodeInfo",
 	description          = "Get NodeInfo instances",
 	response_description = "List of NodeInfo",
 	tags                 = ["NodeInfo"])
-async def api_model_nodeinfo_get(                                session_manager: db.SessionManagerDepRO, request: Request, response: Response, query_filter: models.SharedFilterQuery ) -> list[models.NodeInfoClass]:
-	return await api_model_get(model=models.NodeInfo,        session_manager=session_manager,         request=request,  response=response,  query_filter=query_filter  )
+async def api_model_nodeinfo_get(                                  session_manager: db.SessionManagerDepRO, request: Request, response: Response, query_filter: models.TimedFilterQuery ) -> list[models.NodeInfoClass]:
+	return await api_model_get( model=models.NodeInfo,         session_manager=session_manager,         request=request,  response=response,  query_filter=query_filter  )
 
-@app.post("/api/models/nodeinfo",
+@app.post("/api/messages/nodeinfo",
 	summary              = "Add NodeInfo",
 	description          = "Add NodeInfo instance",
 	response_description = "None",
 	tags                 = ["NodeInfo"],
 	status_code          = status.HTTP_201_CREATED)
-async def api_model_nodeinfo_post(  data: models.NodeInfoClass,  session_manager: db.SessionManagerDepRW, request: Request, response: Response ) -> None:
-	return await api_model_post(data=data,                   session_manager=session_manager,         request=request,  response=response )
+async def api_model_nodeinfo_post(  data: models.NodeInfoClass,    session_manager: db.SessionManagerDepRW, request: Request, response: Response ) -> None:
+	return await api_model_post(data=data,                     session_manager=session_manager,         request=request,  response=response )
 
 
 
 
 
 
-@app.get("/api/models/nodes",
+@app.get("/api/messages/nodes",
 	summary              = "Get Nodes",
 	description          = "Get Node instances",
 	response_description = "List of Nodes",
 	tags                 = ["Node"])
-async def api_model_node_get(                                    session_manager: db.SessionManagerDepRO, request: Request, response: Response, query_filter: models.SharedFilterQuery ) -> list[models.NodesClass]:
-	return await api_model_get(model=models.Nodes,           session_manager=session_manager,         request=request,  response=response,  query_filter=query_filter  )
+async def api_model_node_get(                                      session_manager: db.SessionManagerDepRO, request: Request, response: Response, query_filter: models.SharedFilterQuery ) -> list[models.NodesClass]:
+	return await api_model_get( model=models.Nodes,            session_manager=session_manager,         request=request,  response=response,  query_filter=query_filter  )
 
-@app.post("/api/models/nodes",
+@app.post("/api/messages/nodes",
 	summary              = "Add Node",
 	description          = "Add Node instance",
 	response_description = "None",
 	tags                 = ["Node"],
 	status_code          = status.HTTP_201_CREATED)
-async def api_model_node_post(      data: models.NodesClass,     session_manager: db.SessionManagerDepRW, request: Request, response: Response) -> None:
-	return await api_model_post(data=data,                   session_manager=session_manager,         request=request,  response=response )
+async def api_model_node_post(      data: models.NodesClass,       session_manager: db.SessionManagerDepRW, request: Request, response: Response) -> None:
+	return await api_model_post(data=data,                     session_manager=session_manager,         request=request,  response=response )
 
 
 
 
 
-@app.get("/api/models/telemetry",
-	summary="Get Telemetries",
-	description="Get Telemetry instances",
-	response_description="List of Telemetries",
-	tags=["Telemetry"])
-async def api_model_node_get(                                    session_manager: db.SessionManagerDepRO, request: Request, response: Response, query_filter: models.SharedFilterQuery ) -> list[models.TelemetryClass]:
-	return await api_model_get(                              session_manager=session_manager,         request=request,  response=response,  query_filter=query_filter  )
+@app.get("/api/messages/position",
+	summary="Get Positions",
+	description="Get Position instances",
+	response_description="List of Positions",
+	tags=["Position"])
+async def api_model_position_get(                                  session_manager: db.SessionManagerDepRO, request: Request, response: Response, query_filter: models.TimedFilterQuery ) -> list[models.TelemetryClass]:
+	return await api_model_get( model=models.Position,         session_manager=session_manager,         request=request,  response=response,  query_filter=query_filter  )
 
-@app.post("/api/models/telemetry",
-	summary="Add Telemetry",
-	description="Add Telemetry instance",
+@app.post("/api/messages/position",
+	summary="Add Positions",
+	description="Add Position instance",
 	response_description="None",
-	tags=["Telemetry"],
+	tags=["Position"],
 	status_code=status.HTTP_201_CREATED)
-async def api_model_node_post(      data: models.TelemetryClass, session_manager: db.SessionManagerDepRW, request: Request, response: Response ) -> None:
-	return await api_model_post(data=data,                   session_manager=session_manager,         request=request,  response=response )
+async def api_model_position_post(  data: models.PositionClass,    session_manager: db.SessionManagerDepRW, request: Request, response: Response ) -> None:
+	return await api_model_post(data=data,                     session_manager=session_manager,         request=request,  response=response )
+
+
+
+
+
+@app.get("/api/messages/rangetest",
+	summary              = "Get RangeTests",
+	description          = "Get RangeTest instances",
+	response_description = "List of RangeTests",
+	tags                 = ["RangeTest"])
+async def api_model_position_get(                                  session_manager: db.SessionManagerDepRO, request: Request, response: Response, query_filter: models.TimedFilterQuery ) -> list[models.TelemetryClass]:
+	return await api_model_get( model=models.RangeTest,        session_manager=session_manager,         request=request,  response=response,  query_filter=query_filter  )
+
+@app.post("/api/messages/rangetest",
+	summary              = "Add RangeTests",
+	description          = "Add RangeTest instance",
+	response_description = "None",
+	tags                 = ["RangeTest"],
+	status_code          = status.HTTP_201_CREATED)
+async def api_model_position_post(  data: models.RangeTestClass,   session_manager: db.SessionManagerDepRW, request: Request, response: Response ) -> None:
+	return await api_model_post(data=data,                     session_manager=session_manager,         request=request,  response=response )
+
+
+
+
+
+@app.get("/api/messages/telemetry",
+	summary              = "Get Telemetries",
+	description          = "Get Telemetry instances",
+	response_description = "List of Telemetries",
+	tags                 = ["Telemetry"])
+async def api_model_node_get(                                      session_manager: db.SessionManagerDepRO, request: Request, response: Response, query_filter: models.TimedFilterQuery ) -> list[models.TelemetryClass]:
+	return await api_model_get( model=models.Telemetry,        session_manager=session_manager,         request=request,  response=response,  query_filter=query_filter  )
+
+@app.post("/api/messages/telemetry",
+	summary              = "Add Telemetry",
+	description          = "Add Telemetry instance",
+	response_description = "None",
+	tags                 = ["Telemetry"],
+	status_code          = status.HTTP_201_CREATED)
+async def api_model_node_post(      data: models.TelemetryClass,   session_manager: db.SessionManagerDepRW, request: Request, response: Response ) -> None:
+	return await api_model_post(data=data,                     session_manager=session_manager,         request=request,  response=response )
+
+
+
+
+
+@app.get("/api/messages/textmessage",
+	summary              = "Get TextMessages",
+	description          = "Get TextMessage instances",
+	response_description = "List of TextMessages",
+	tags                 = ["TextMessage"])
+async def api_model_node_get(                                      session_manager: db.SessionManagerDepRO, request: Request, response: Response, query_filter: models.TimedFilterQuery ) -> list[models.TelemetryClass]:
+	return await api_model_get( model=models.TextMessage,      session_manager=session_manager,         request=request,  response=response,  query_filter=query_filter  )
+
+@app.post("/api/messages/textmessage",
+	summary              = "Add TextMessages",
+	description          = "Add TextMessage instance",
+	response_description = "None",
+	tags                 = ["TextMessage"],
+	status_code          = status.HTTP_201_CREATED)
+async def api_model_node_post(      data: models.TextMessageClass, session_manager: db.SessionManagerDepRW, request: Request, response: Response ) -> None:
+	return await api_model_post(data=data,                     session_manager=session_manager,         request=request,  response=response )
 
 
 

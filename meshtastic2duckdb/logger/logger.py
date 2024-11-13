@@ -155,7 +155,7 @@ def run(*, config: Config, db_engine: db.DbEngine):
 					#print(f"{'loops':15s}: {loop_num:12,d}")
 					#for k, v in db_manager.stats.items():
 					#	print(f"{k:15s}: {v:12,d}")
-					print( "".join(f"{k}: {v:12,d} | " for k, v in sorted({**db_manager.stats, **{'loops':loop_num}}.items())) )
+					print( "".join(f"{k[1]}: {v:12,d} | " for k, v in sorted({**db_manager.stats, **{(0,'loops'):loop_num}}.items())) )
 
 			loop_num += 1
 			time.sleep(1)
