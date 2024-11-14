@@ -4,7 +4,7 @@ from ._message import *
 
 class NodeInfoClass(MessageClass):
 	__tablename__       = "nodeinfo"
-	__ormclass__        = "NodeInfo"
+	__ormclass__        = lambda: NodeInfo
 
 	user_id             : str # !a
 	longName            : str # M
@@ -26,13 +26,16 @@ class NodeInfoClass(MessageClass):
 
 nodeinfo_id_seq = gen_id_seq("nodeinfo")
 class NodeInfo(Message, SQLModel, table=True):
-	user_id             : str          = Field(nullable=False, sa_type=Text()) # !a
-	longName            : str          = Field(nullable=False, sa_type=Text()) # M
-	shortName           : str          = Field(nullable=False, sa_type=Text()) # M
-	macaddr             : str          = Field(nullable=False, sa_type=Text()) # 8Z
-	hwModel             : str          = Field(nullable=False, sa_type=Text()) # TRACKER_T1000_E
-	role                : str          = Field(nullable=False, sa_type=Text()) # TRACKER
-	publicKey           : str          = Field(nullable=False, sa_type=Text()) # S3
+	__dataclass__ = lambda: NodeInfoClass
+	__filter__    = lambda: NodeInfoFilterQuery
+
+	user_id             : str          = Field(nullable=False, sa_type=Text(), index=True) # !a
+	longName            : str          = Field(nullable=False, sa_type=Text(), index=True) # M
+	shortName           : str          = Field(nullable=False, sa_type=Text(), index=True) # M
+	macaddr             : str          = Field(nullable=False, sa_type=Text()            ) # 8Z
+	hwModel             : str          = Field(nullable=False, sa_type=Text(), index=True) # TRACKER_T1000_E
+	role                : str          = Field(nullable=False, sa_type=Text(), index=True) # TRACKER
+	publicKey           : str          = Field(nullable=False, sa_type=Text()            ) # S3
 
 	id                  : int64 | None = Field(primary_key=True, sa_column_kwargs={"server_default": nodeinfo_id_seq.next_value()}, nullable=True)
 
@@ -63,3 +66,64 @@ to                      : <class 'int'> 41
 toId                    : <class 'str'> !f8
 """
 
+from enum import Enum
+class Roles(str, Enum):
+	#https://meshtastic.org/docs/configuration/radio/device/
+	CLIENT         : str = "CLIENT"
+	CLIENT_MUTE    : str = "CLIENT_MUTE"
+	CLIENT_HIDDEN  : str = "CLIENT_HIDDEN"
+	TRACKER        : str = "TRACKER"
+	LOST_AND_FOUND : str = "LOST_AND_FOUND"
+	SENSOR         : str = "SENSOR"
+	TAK            : str = "TAK"
+	TAK_TRACKER    : str = "TAK_TRACKER"
+	REPEATER       : str = "REPEATER"
+	ROUTER         : str = "ROUTER"
+
+
+class NodeInfoFilterQueryParams(TimedFilterQueryParams):
+	userIds    : Annotated[Optional[str  ], Query(default=None ) ]
+	shortNames : Annotated[Optional[str  ], Query(default=None ) ]
+	longNames  : Annotated[Optional[str  ], Query(default=None ) ]
+	hwModels   : Annotated[Optional[str  ], Query(default=None ) ]
+	roles      : Annotated[Optional[str  ], Query(default=None ) ]
+
+	def __call__(self, session: dbgenerics.GenericSession, cls):
+		qry = TimedFilterQueryParams.__call__(self, session, cls)
+
+		if self.userIds is not None:
+			print(" USER IDS    ", self.userIds)
+			user_ids = self.userIds.split(',')
+			if user_ids:
+				qry = qry.where(cls.user_id.in_( user_ids ))
+
+		if self.shortNames is not None:
+			print(" SHORT NAMES ", self.shortNames)
+			short_names = self.shortNames.split(',')
+			if short_names:
+				qry = qry.where(cls.shortName.in_( short_names ))
+
+		if self.longNames is not None:
+			print(" LONG NAMES  ", self.longNames)
+			long_names = self.longNames.split(',')
+			if long_names:
+				qry = qry.where(cls.longName.in_( long_names ))
+
+		if self.hwModels is not None:
+			print(" HW MODELS   ", self.hwModels)
+			hw_models = self.hwModels.split(',')
+			if long_names:
+				qry = qry.where(cls.hwModel.in_( hw_models ))
+
+		if self.roles is not None:
+			roles = self.roles.split(",")
+			if roles:
+				print(" ROLES       ", self.roles)
+				roles = self.roles.split(",")
+				if not all(r in Roles.__members__ for r in roles):
+					raise HTTPException(status_code=400, detail="INVALID ROLES: " + ",".join(r for r in roles if r not in Roles.__members__))
+				qry = qry.where( cls.role.in_(roles) )
+
+		return qry
+
+NodeInfoFilterQuery = Annotated[NodeInfoFilterQueryParams, Depends(NodeInfoFilterQueryParams)]

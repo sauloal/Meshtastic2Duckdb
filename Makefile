@@ -13,6 +13,7 @@ help:
 	@echo "  openapi"
 	@echo
 	@echo "  curl-get"
+	@echo "  curl-get-filter"
 	@echo "  curl-post"
 	@echo
 	@echo "  sql-dump"
@@ -47,7 +48,7 @@ help:
 .PHONY: local-config
 .PHONY: logger
 .PHONY: server server-dev openapi
-.PHONY: curl-get curl-post
+.PHONY: curl-get curl-get-filter curl-post
 
 local-config:
 	@echo 'export `cat config.env`; export `envsubst < config.env`'
@@ -71,11 +72,46 @@ openapi:
 curl-get:
 	. ./config.env && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}" | jq .
 	. ./config.env && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api" | jq .
-	. ./config.env && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api/models" | jq .
-	. ./config.env && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api/models/nodes" | jq .
+	. ./config.env && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api/messages" | jq .
+	. ./config.env && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api/messages/nodeinfo" | jq .
+	. ./config.env && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api/messages/nodes" | jq .
+	. ./config.env && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api/messages/position" | jq .
+	. ./config.env && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api/messages/rangetest" | jq .
+	. ./config.env && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api/messages/telemetry" | jq .
+	. ./config.env && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api/messages/textmessage" | jq .
+
+curl-get-filter:
+	. ./config.env && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api/messages/nodeinfo?roles=TRACKER" | jq .
+	. ./config.env && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api/messages/nodeinfo?roles=MAMA" | jq .
+	. ./config.env && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api/messages/nodeinfo?roles=TRACKER,CLIENT" | jq .
+	. ./config.env && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api/messages/nodeinfo?roles=TRACKER,CLIENT,MAMA" | jq .
+	. ./config.env && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api/messages/nodeinfo?shortNames=AAA" | jq .
+
+	. ./config.env && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api/messages/nodes?is_favorite=1" | jq .
+	. ./config.env && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api/messages/nodes?has_location=1" | jq .
+	. ./config.env && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api/messages/nodes?roles=TRACKER" | jq .
+	. ./config.env && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api/messages/nodes?roles=MAMA" | jq .
+	. ./config.env && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api/messages/nodes?roles=TRACKER,CLIENT" | jq .
+	. ./config.env && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api/messages/nodes?roles=TRACKER,CLIENT,MAMA" | jq .
+
+	. ./config.env && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api/messages/position?hasLocation=1" | jq .
+	. ./config.env && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api/messages/position?minLatitudeI=1" | jq .
+	. ./config.env && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api/messages/position?minLatitude=1" | jq .
+	. ./config.env && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api/messages/position?minAltitude=1" | jq .
+	. ./config.env && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api/messages/position?minPDOP=1" | jq .
+	. ./config.env && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api/messages/position?minGroundSpeed=0" | jq .
+
+	. ./config.env && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api/messages/telemetry?minBatteryLevel=10" | jq .
+	. ./config.env && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api/messages/telemetry?hasLux=1" | jq .
+	. ./config.env && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api/messages/telemetry?hasTemperature=1" | jq .
+
+	. ./config.env && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api/messages/textmessage?isPkiEncrypted=1" | jq .
+	. ./config.env && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api/messages/textmessage?channels=1" | jq .
+	. ./config.env && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api/messages/textmessage?channels=a" | jq .
+	. ./config.env && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api/messages/textmessage?channels=1,2" | jq .
 
 curl-post:
-	. ./config.env && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api/models/nodes?dry-run=true" \
+	. ./config.env && curl -v "$${MESH_LOGGER_REMOTE_HTTP_HOST}:$${MESH_LOGGER_REMOTE_HTTP_PORT}/api/messages/nodes?dry-run=true" \
 		-H 'content-type: application/json' \
 		-d '{"hopsAway": 0, "lastHeard": 1731060061, "num": 4175865308, "snr": 16.5, "isFavorite": null, "airUtilTx": 3.0786943, "batteryLevel": 75, "channelUtilization": 5.9116664, "uptimeSeconds": 176372, "voltage": 3.942, "altitude": null, "latitude": null, "latitudeI": null, "longitude": null, "longitudeI": null, "time": null, "hwModel": "TRACKER_T1000_E", "user_id": "f8e6a5dc", "longName": "Saulo", "macaddr": "/pf45qXc", "publicKey": "zd9XSkmI+ptPM6H+PlReOTL2d5iCW6S/YHe3cGbQen4=", "role": "TRACKER", "shortName": "SAAA", "id": null}'
 

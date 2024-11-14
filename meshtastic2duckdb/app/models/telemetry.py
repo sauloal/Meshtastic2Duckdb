@@ -4,7 +4,7 @@ from ._message import *
 
 class TelemetryClass(MessageClass):
 	__tablename__       = "telemetry"
-	__ormclass__        = "Telemetry"
+	__ormclass__        = lambda: Telemetry
 
 	time                : int64        # 1700000000
 	batteryLevel        : int8  | None # 76
@@ -41,21 +41,65 @@ class TelemetryClass(MessageClass):
 telemetry_id_seq = gen_id_seq("telemetry")
 
 class Telemetry(Message, SQLModel, table=True):
-	time                : int64        = Field(              sa_type=BigInteger()  , nullable=False ) # 17000000000
-	batteryLevel        : int8  | None = Field(default=None, sa_type=SmallInteger(), nullable=True  ) # 76
-	voltage             : float | None = Field(default=None, sa_type=Float()       , nullable=True  ) # 3.956
-	channelUtilization  : float | None = Field(default=None, sa_type=Float()       , nullable=True  ) # 5.8016667
-	airUtilTx           : float | None = Field(default=None, sa_type=Float()       , nullable=True  ) # 4.323389
-	uptimeSeconds       : int32 | None = Field(default=None, sa_type=Integer()     , nullable=True  ) # 51470
-	numPacketsTx        : int32 | None = Field(default=None, sa_type=Integer()     , nullable=True  ) # 62
-	numPacketsRx        : int32 | None = Field(default=None, sa_type=Integer()     , nullable=True  ) # 103
-	numOnlineNodes      : int16 | None = Field(default=None, sa_type=SmallInteger(), nullable=True  ) # 3
-	numTotalNodes       : int16 | None = Field(default=None, sa_type=SmallInteger(), nullable=True  ) # 3
-	lux                 : float | None = Field(default=None, sa_type=Float()       , nullable=True  ) # 0.0
-	temperature         : float | None = Field(default=None, sa_type=Float()       , nullable=True  ) # 25.240046
+	__dataclass__ = lambda: TelemetryClass
+	__filter__    = lambda: TelemetryFilterQuery
+
+	time                : int64        = Field(              sa_type=BigInteger()  , nullable=False             ) # 17000000000
+	batteryLevel        : int8  | None = Field(default=None, sa_type=SmallInteger(), nullable=True , index=True ) # 76
+	voltage             : float | None = Field(default=None, sa_type=Float()       , nullable=True              ) # 3.956
+	channelUtilization  : float | None = Field(default=None, sa_type=Float()       , nullable=True              ) # 5.8016667
+	airUtilTx           : float | None = Field(default=None, sa_type=Float()       , nullable=True              ) # 4.323389
+	uptimeSeconds       : int32 | None = Field(default=None, sa_type=Integer()     , nullable=True              ) # 51470
+	numPacketsTx        : int32 | None = Field(default=None, sa_type=Integer()     , nullable=True              ) # 62
+	numPacketsRx        : int32 | None = Field(default=None, sa_type=Integer()     , nullable=True              ) # 103
+	numOnlineNodes      : int16 | None = Field(default=None, sa_type=SmallInteger(), nullable=True              ) # 3
+	numTotalNodes       : int16 | None = Field(default=None, sa_type=SmallInteger(), nullable=True              ) # 3
+	lux                 : float | None = Field(default=None, sa_type=Float()       , nullable=True , index=True ) # 0.0
+	temperature         : float | None = Field(default=None, sa_type=Float()       , nullable=True , index=True ) # 25.240046
 
 	id                  : int64 | None = Field(primary_key=True, sa_column_kwargs={"server_default": telemetry_id_seq.next_value()}, nullable=True)
 
+
+"""
+from enum import Enum
+class Roles(str, Enum):
+	#https://meshtastic.org/docs/configuration/radio/device/
+	CLIENT         : str = "CLIENT"
+	CLIENT_MUTE    : str = "CLIENT_MUTE"
+	CLIENT_HIDDEN  : str = "CLIENT_HIDDEN"
+	TRACKER        : str = "TRACKER"
+	LOST_AND_FOUND : str = "LOST_AND_FOUND"
+	SENSOR         : str = "SENSOR"
+	TAK            : str = "TAK"
+	TAK_TRACKER    : str = "TAK_TRACKER"
+	REPEATER       : str = "REPEATER"
+	ROUTER         : str = "ROUTER"
+"""
+
+class TelemetryFilterQueryParams(TimedFilterQueryParams):
+	minBatteryLevel: Annotated[Optional[int  ], Query(default=None, ge=0  , le=100 ) ]
+	hasLux         : Annotated[Optional[bool ], Query(default=None, ge=0           ) ]
+	hasTemperature : Annotated[Optional[bool ], Query(default=None, ge=-50, le=100 ) ]
+
+	def __call__(self, session: dbgenerics.GenericSession, cls):
+		qry = TimedFilterQueryParams.__call__(self, session, cls)
+
+		if self.minBatteryLevel is not None:
+			print(" MIN BAT     ", self.minBatteryLevel)
+			qry = qry.where(cls.batteryLevel is not None            )
+			qry = qry.where(cls.batteryLevel >= self.minBatteryLevel)
+
+		if self.hasLux is not None:
+			print(" HAS LUX     ", self.hasLux)
+			qry = qry.where(cls.lux is not None)
+
+		if self.hasTemperature is not None:
+			print(" HAS TEMPERATURE", self.hasTemperature)
+			qry = qry.where(cls.temperature is not None)
+
+		return qry
+
+TelemetryFilterQuery = Annotated[TelemetryFilterQueryParams, Depends(TelemetryFilterQueryParams)]
 
 
 """

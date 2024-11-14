@@ -3,7 +3,7 @@ from ._message import *
 
 class RangeTestClass(MessageClass):
 	__tablename__       = "rangetest"
-	__ormclass__        = "RangeTest"
+	__ormclass__        = lambda: RangeTest
 
 	payload             : bytes # b'Hi'
 	text                : str   # 'Hi'
@@ -17,6 +17,9 @@ class RangeTestClass(MessageClass):
 rangetest_id_seq = gen_id_seq("rangetest")
 
 class RangeTest(Message, SQLModel, table=True):
+	__dataclass__ = lambda: RangeTestClass
+	__filter__    = lambda: TimedFilterQuery
+
 	payload             : bytes        = Field(nullable=False, sa_type=LargeBinary()) # b'Hi'
 	text                : str          = Field(nullable=False, sa_type=Text()       ) # 'Hi'
 

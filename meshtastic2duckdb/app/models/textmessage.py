@@ -3,7 +3,7 @@ from ._message import *
 
 class TextMessageClass(MessageClass):
 	__tablename__       = "textmessage"
-	__ormclass__        = "TextMessage"
+	__ormclass__        = lambda: TextMessage
 
 	payload             : bytes       # b'Hi'
 	text                : str         # 'Hi'
@@ -27,14 +27,45 @@ class TextMessageClass(MessageClass):
 textmessage_id_seq = gen_id_seq("textmessage")
 
 class TextMessage(Message, SQLModel, table=True):
-	payload             : bytes        = Field(nullable=False, sa_type=LargeBinary()  ) # b'Hi'
-	text                : str          = Field(nullable=False, sa_type=Text()         ) # 'Hi'
-	channel             : int8  | None = Field(nullable=True , sa_type=SmallInteger() ) # 1     - Public Broadcast
-	wantAck             : bool  | None = Field(nullable=True , sa_type=Boolean()      ) # True, - Direct Message
-	publicKey           : str   | None = Field(nullable=True , sa_type=Text()         ) # 'zd9' - Direct Message
-	pkiEncrypted        : bool  | None = Field(nullable=True , sa_type=Boolean()      ) # True  - Direct Message
+	__dataclass__ = lambda: TextMessageClass
+	__filter__    = lambda: TextMessageFilterQuery
+
+	payload             : bytes        = Field(nullable=False, sa_type=LargeBinary()              ) # b'Hi'
+	text                : str          = Field(nullable=False, sa_type=Text()                     ) # 'Hi'
+	channel             : int8  | None = Field(nullable=True , sa_type=SmallInteger(), index=True ) # 1     - Public Broadcast
+	wantAck             : bool  | None = Field(nullable=True , sa_type=Boolean()                  ) # True, - Direct Message
+	publicKey           : str   | None = Field(nullable=True , sa_type=Text()                     ) # 'zd9' - Direct Message
+	pkiEncrypted        : bool  | None = Field(nullable=True , sa_type=Boolean()     , index=True ) # True  - Direct Message
 
 	id                  : int64 | None = Field(primary_key=True, sa_column_kwargs={"server_default": textmessage_id_seq.next_value()}, nullable=True)
+
+class TextMessageFilterQueryParams(TimedFilterQueryParams):
+	isPkiEncrypted: Annotated[Optional[bool ], Query(default=None ) ]
+	channels      : Annotated[Optional[str  ], Query(default=None ) ]
+
+	def __call__(self, session: dbgenerics.GenericSession, cls):
+		qry = TimedFilterQueryParams.__call__(self, session, cls)
+
+		if self.isPkiEncrypted is not None:
+			print(" IS PKI ENCRYPTED", self.isPkiEncrypted)
+			qry = qry.where(cls.pkiEncrypted == self.isPkiEncrypted)
+
+		if self.channels is not None:
+			print(" CHANNELS        ", self.channels)
+			channels = self.channels.split(',')
+			if channels:
+				for b,c in enumerate(channels):
+					try:
+						channels[b] = int(c)
+						assert channels[b] < 16
+					except:
+						raise HTTPException(status_code=400, detail="INVALID CHANNEL: " + ",".join(c for c in channels))
+
+				qry = qry.where(cls.channel.in_( channels ))
+
+		return qry
+
+TextMessageFilterQuery = Annotated[TextMessageFilterQueryParams, Depends(TextMessageFilterQueryParams)]
 
 """
 Received

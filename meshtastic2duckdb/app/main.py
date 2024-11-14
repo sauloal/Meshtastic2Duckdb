@@ -101,9 +101,9 @@ async def readyz():
 
 @app.get("/api")
 async def api_get():
-	return { "endpoints": ["models"] }
+	return { "endpoints": ["messages"] }
 
-@app.get("/api/models")
+@app.get("/api/messages")
 async def api_models_get():
 	# TODO: Get from database
 	return { "endpoints": ["NodeInfo", "Nodes", "RangeTest", "Telemetry", "TextMessage"] }
@@ -113,10 +113,9 @@ async def api_models_get():
 
 
 async def api_model_get( model: models.Message,      session_manager: db.SessionManagerDepRO, request: Request, response: Response, query_filter: models.SharedFilterQuery ) -> list:
-	print("api_model_get", "model", model, "session_manager", session_manager, "request", request, "response", response, "query_filter", query_filter)
+	#print("api_model_get", "model", model, "session_manager", session_manager, "request", request, "response", response, "query_filter", query_filter)
 	#https://fastapi.tiangolo.com/tutorial/sql-databases/#read-heroes
 
-	print(model, type(model), dir(model))
 	resp = model.Query(session_manager=session_manager, query_filter=query_filter)
 
 	return resp
@@ -124,7 +123,8 @@ async def api_model_get( model: models.Message,      session_manager: db.Session
 async def api_model_post( data: models.MessageClass, session_manager: db.SessionManagerDepRW, request: Request, response: Response ) -> None:
 	# print("api_model_post", "data", data, type(data), "session_manager", session_manager, "request", request, "response", response)
 
-	orm = models.class_to_ORM(data)
+	orm = data.toORM()
+	#orm = models.class_to_ORM(data)
 	# print("  orm", orm)
 
 	with session_manager as session:
@@ -143,7 +143,7 @@ async def api_model_post( data: models.MessageClass, session_manager: db.Session
 	description          = "Get NodeInfo instances",
 	response_description = "List of NodeInfo",
 	tags                 = ["NodeInfo"])
-async def api_model_nodeinfo_get(                                  session_manager: db.SessionManagerDepRO, request: Request, response: Response, query_filter: models.TimedFilterQuery ) -> list[models.NodeInfoClass]:
+async def api_model_nodeinfo_get(                                  session_manager: db.SessionManagerDepRO, request: Request, response: Response, query_filter: models.NodeInfo.__filter__() ) -> list[models.NodeInfoClass]:
 	return await api_model_get( model=models.NodeInfo,         session_manager=session_manager,         request=request,  response=response,  query_filter=query_filter  )
 
 @app.post("/api/messages/nodeinfo",
@@ -165,7 +165,7 @@ async def api_model_nodeinfo_post(  data: models.NodeInfoClass,    session_manag
 	description          = "Get Node instances",
 	response_description = "List of Nodes",
 	tags                 = ["Node"])
-async def api_model_node_get(                                      session_manager: db.SessionManagerDepRO, request: Request, response: Response, query_filter: models.SharedFilterQuery ) -> list[models.NodesClass]:
+async def api_model_node_get(                                      session_manager: db.SessionManagerDepRO, request: Request, response: Response, query_filter: models.Nodes.__filter__() ) -> list[models.NodesClass]:
 	return await api_model_get( model=models.Nodes,            session_manager=session_manager,         request=request,  response=response,  query_filter=query_filter  )
 
 @app.post("/api/messages/nodes",
@@ -186,7 +186,7 @@ async def api_model_node_post(      data: models.NodesClass,       session_manag
 	description="Get Position instances",
 	response_description="List of Positions",
 	tags=["Position"])
-async def api_model_position_get(                                  session_manager: db.SessionManagerDepRO, request: Request, response: Response, query_filter: models.TimedFilterQuery ) -> list[models.TelemetryClass]:
+async def api_model_position_get(                                  session_manager: db.SessionManagerDepRO, request: Request, response: Response, query_filter: models.Position.__filter__() ) -> list[models.PositionClass]:
 	return await api_model_get( model=models.Position,         session_manager=session_manager,         request=request,  response=response,  query_filter=query_filter  )
 
 @app.post("/api/messages/position",
@@ -207,7 +207,7 @@ async def api_model_position_post(  data: models.PositionClass,    session_manag
 	description          = "Get RangeTest instances",
 	response_description = "List of RangeTests",
 	tags                 = ["RangeTest"])
-async def api_model_position_get(                                  session_manager: db.SessionManagerDepRO, request: Request, response: Response, query_filter: models.TimedFilterQuery ) -> list[models.TelemetryClass]:
+async def api_model_position_get(                                  session_manager: db.SessionManagerDepRO, request: Request, response: Response, query_filter: models.RangeTest.__filter__() ) -> list[models.RangeTestClass]:
 	return await api_model_get( model=models.RangeTest,        session_manager=session_manager,         request=request,  response=response,  query_filter=query_filter  )
 
 @app.post("/api/messages/rangetest",
@@ -228,7 +228,7 @@ async def api_model_position_post(  data: models.RangeTestClass,   session_manag
 	description          = "Get Telemetry instances",
 	response_description = "List of Telemetries",
 	tags                 = ["Telemetry"])
-async def api_model_node_get(                                      session_manager: db.SessionManagerDepRO, request: Request, response: Response, query_filter: models.TimedFilterQuery ) -> list[models.TelemetryClass]:
+async def api_model_node_get(                                      session_manager: db.SessionManagerDepRO, request: Request, response: Response, query_filter: models.Telemetry.__filter__() ) -> list[models.TelemetryClass]:
 	return await api_model_get( model=models.Telemetry,        session_manager=session_manager,         request=request,  response=response,  query_filter=query_filter  )
 
 @app.post("/api/messages/telemetry",
@@ -249,7 +249,7 @@ async def api_model_node_post(      data: models.TelemetryClass,   session_manag
 	description          = "Get TextMessage instances",
 	response_description = "List of TextMessages",
 	tags                 = ["TextMessage"])
-async def api_model_node_get(                                      session_manager: db.SessionManagerDepRO, request: Request, response: Response, query_filter: models.TimedFilterQuery ) -> list[models.TelemetryClass]:
+async def api_model_node_get(                                      session_manager: db.SessionManagerDepRO, request: Request, response: Response, query_filter: models.TextMessage.__filter__() ) -> list[models.TextMessageClass]:
 	return await api_model_get( model=models.TextMessage,      session_manager=session_manager,         request=request,  response=response,  query_filter=query_filter  )
 
 @app.post("/api/messages/textmessage",

@@ -1,28 +1,22 @@
 import sys
 import json
 import typing
+import datetime
 import dataclasses
 
-from typing import Annotated, Optional
+from typing import Annotated, Optional, Generator, Literal
 
 from sqlalchemy             import BigInteger, SmallInteger, Integer, Text, Float, Boolean, LargeBinary
-# from sqlalchemy.orm         import Mapped
-# from sqlalchemy.orm         import mapped_column
-# from sqlalchemy.orm         import registry
 
 from fastapi import Depends, Query
+from fastapi import HTTPException
 
 import pydantic
 from pydantic import BaseModel
 
-from typing import Annotated, Generator, Literal
-
 from sqlmodel import Field, Sequence, SQLModel, Column, Session
-from sqlmodel import select
-#, SQLModel, create_engine
 
-#from sqlalchemy import Sequence
-
+from ._query import SharedFilterQuery, SharedFilterQueryParams, TimedFilterQuery, TimedFilterQueryParams
 from .. import dbgenerics
 
 # https://docs.sqlalchemy.org/en/20/orm/dataclasses.html
@@ -45,25 +39,9 @@ int64 = Annotated[int, BigInteger  ] # https://docs.sqlalchemy.org/en/20/core/ty
 Sequences = []
 
 
-# https://fastapi.tiangolo.com/tutorial/dependencies/classes-as-dependencies/#classes-as-dependencies_1
-class SharedFilterQueryParams(BaseModel):
-	offset  : Annotated[ int                                , Query(default=0  , ge=0)         ]
-	limit   : Annotated[ int                                , Query(default=10 , gt=0, le=100) ]
-	dryrun  : Annotated[ bool                               , Query(default=False)             ]
-	order   : Annotated[ Literal["asc"       , "dsc"       ], Query(default="asc")             ]
-	# reversed: Annotated[ bool                               , Query(default=False)             ]
-	# order_by: Annotated[ Literal["created_at", "updated_at"], Query(default="created_at")      ]
-	# group_by: Annotated[ Literal["created_at", "updated_at"], Query(default="created_at")      ]
-	# tags    : list[str] = []
-	q       : Annotated[ str | None                         , Query(default=None)              ]
-
-SharedFilterQuery = Annotated[SharedFilterQueryParams, Depends(SharedFilterQueryParams)]
-
-
-
-
-
 class ModelBaseClass(pydantic.BaseModel):
+	gateway_receive_time : int64
+
 	@classmethod
 	def _parse_fields(cls, packet) -> dict[str, typing.Any]:
 		try:
@@ -75,6 +53,7 @@ class ModelBaseClass(pydantic.BaseModel):
 	@classmethod
 	def from_packet(cls, packet) -> "ModelBaseClass":
 		fields  = cls._parse_fields(packet)
+		fields["gateway_receive_time"] = int(datetime.datetime.timestamp(datetime.datetime.now()))
 
 		try:
 			inst    = cls(**fields)
@@ -97,18 +76,40 @@ class ModelBaseClass(pydantic.BaseModel):
 		d = {k:v for k,v in self if k not in ["id", "metadata"]}
 		return d
 
+	def toORM(self) -> "ModelBase":
+		orm_class = self.__class__.__ormclass__()
+		# print("orm_class", orm_class)
+
+		orm_inst       = orm_class(**self.toDICT())
+		# print("orm_inst      ", orm_inst)
+
+		return orm_inst
+
 
 
 class ModelBase:
+	gateway_receive_time : int64 = Field(              sa_type=BigInteger()  , nullable=False, index=True )
+
 	@classmethod
 	def Query( cls, *, session_manager: dbgenerics.GenericSessionManager, query_filter: SharedFilterQuery ) -> "list[ModelBase]":
 		print("class query", "model", cls, "session_manager", session_manager, "query_filter", query_filter)
 		# https://fastapi.tiangolo.com/tutorial/sql-databases/#read-heroes
 
 		with session_manager as session:
-			resp = session.exec(select(cls).offset(query_filter.offset).limit(query_filter.limit)).all()
+			qry     = query_filter(session, cls)
+			results = session.exec(qry)
+			results = [r.to_dataclass() for r in results]
+		return results
 
-		return resp
+	@classmethod
+	def from_dataclass(cls, inst: ModelBaseClass) -> "Message":
+		return cls(**inst.toJSON())
+
+	def to_dataclass(self) -> ModelBaseClass:
+		return self.__class__.__dataclass__()(**self.model_dump())
+
+		#return self.__class__.__dataclass(**self.model_dump())
+		#return cls(**self.model_dump())
 
 
 def gen_id_seq(name:str) -> Sequence:
@@ -119,18 +120,3 @@ def gen_id_seq(name:str) -> Sequence:
 	return id_seq
 
 
-
-
-
-from datetime import datetime
-def get_now() -> datetime:
-	return datetime.timestamp(datetime.now())
-
-def get_since() -> datetime:
-	return datetime.timestamp(datetime.now() - datetime.timedelta(days=1))
-
-class TimedFilterQueryParams(SharedFilterQueryParams):
-	since   : Annotated[int|None       , Query(default_factory=get_since, ge=0)       ]
-	until   : Annotated[int|None       , Query(default=None             , ge=0)       ]
-
-TimedFilterQuery = Annotated[TimedFilterQueryParams, Depends(TimedFilterQueryParams)]

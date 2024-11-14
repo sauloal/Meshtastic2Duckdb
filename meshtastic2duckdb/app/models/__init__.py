@@ -1,4 +1,4 @@
-from ._message    import MessageClass, SharedFilter
+from ._message    import MessageClass
 from ._base       import SharedFilterQuery, TimedFilterQuery
 
 from .nodeinfo    import *

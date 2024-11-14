@@ -4,7 +4,7 @@ from ._message import *
 
 class PositionClass(MessageClass):
 	__tablename__       = "position"
-	__ormclass__        = "Position"
+	__ormclass__        = lambda: Position
 
 	latitudeI           : int32
 	longitudeI          : int32
@@ -36,19 +36,82 @@ class PositionClass(MessageClass):
 position_id_seq = gen_id_seq("position")
 
 class Position(Message, SQLModel, table=True):
-	latitudeI           : int32        = Field(              sa_type=Integer()       , nullable=False ) # 52
-	longitudeI          : int32        = Field(              sa_type=Integer()       , nullable=False ) # 48
-	altitude            : int16        = Field(              sa_type=SmallInteger()  , nullable=False ) # 11
-	time                : int64        = Field(              sa_type=BigInteger()    , nullable=False ) # 17
-	PDOP                : int16        = Field(              sa_type=SmallInteger()  , nullable=False ) # 272
-	groundSpeed         : int8         = Field(              sa_type=SmallInteger()  , nullable=False ) # 1
-	groundTrack         : int64        = Field(              sa_type=BigInteger()    , nullable=False ) # 16
-	satsInView          : int8         = Field(              sa_type=SmallInteger()  , nullable=False ) # 6
-	precisionBits       : int8         = Field(              sa_type=SmallInteger()  , nullable=False ) # 32
-	latitude            : float        = Field(              sa_type=Float()         , nullable=False )# 52
-	longitude           : float        = Field(              sa_type=Float()         , nullable=False ) #  4
+	__dataclass__ = lambda: PositionClass
+	__filter__    = lambda: PositionFilterQuery
+
+	latitudeI           : int32        = Field(              sa_type=Integer()       , nullable=False , index=True ) # 52
+	longitudeI          : int32        = Field(              sa_type=Integer()       , nullable=False , index=True ) # 48
+
+	latitude            : float        = Field(              sa_type=Float()         , nullable=False , index=True ) # 52
+	longitude           : float        = Field(              sa_type=Float()         , nullable=False , index=True ) #  4
+
+	altitude            : int16        = Field(              sa_type=SmallInteger()  , nullable=False , index=True ) # 11
+
+	time                : int64        = Field(              sa_type=BigInteger()    , nullable=False              ) # 17
+	PDOP                : int16        = Field(              sa_type=SmallInteger()  , nullable=False              ) # 272
+	groundSpeed         : int8         = Field(              sa_type=SmallInteger()  , nullable=False , index=True ) # 1
+	groundTrack         : int64        = Field(              sa_type=BigInteger()    , nullable=False , index=True ) # 16
+	satsInView          : int8         = Field(              sa_type=SmallInteger()  , nullable=False              ) # 6
+	precisionBits       : int8         = Field(              sa_type=SmallInteger()  , nullable=False              ) # 32
 
 	id                  : int64 | None = Field(primary_key=True, sa_column_kwargs={"server_default": position_id_seq.next_value()}, nullable=True)
+
+
+class PositionFilterQueryParams(TimedFilterQueryParams):
+	hasLocation   : Annotated[Optional[bool ], Query(default=None ) ]
+
+	minLatitudeI  : Annotated[Optional[int  ], Query(default=None, ge=-90_000_000, le=90_000_000 ) ]
+	maxLatitudeI  : Annotated[Optional[int  ], Query(default=None, ge=-90_000_000, le=90_000_000 ) ]
+
+	minLongitudeI : Annotated[Optional[int  ], Query(default=None, ge=-90_000_000, le=90_000_000 ) ]
+	maxLongitudeI : Annotated[Optional[int  ], Query(default=None, ge=-90_000_000, le=90_000_000 ) ]
+
+	minLatitude   : Annotated[Optional[float], Query(default=None, ge=-90, le=90 ) ]
+	maxLatitude   : Annotated[Optional[float], Query(default=None, ge=-90, le=90 ) ]
+
+	minLongitude  : Annotated[Optional[float], Query(default=None, ge=-90, le=90 ) ]
+	maxLongitude  : Annotated[Optional[float], Query(default=None, ge=-90, le=90 ) ]
+
+	minAltitude   : Annotated[Optional[int  ], Query(default=None, ge=-50, le=100 ) ]
+	maxAltitude   : Annotated[Optional[int  ], Query(default=None, ge=-50, le=100 ) ]
+
+	minPDOP       : Annotated[Optional[int  ], Query(default=None, ge=0, le=2048 ) ]
+	maxPDOP       : Annotated[Optional[int  ], Query(default=None, ge=0, le=2048 ) ]
+
+	minGroundSpeed: Annotated[Optional[int  ], Query(default=None, ge=0, le=256 ) ]
+	maxGroundSpeed: Annotated[Optional[int  ], Query(default=None, ge=0, le=256) ]
+
+	def __call__(self, session: dbgenerics.GenericSession, cls):
+		qry = TimedFilterQueryParams.__call__(self, session, cls)
+
+		for filterName, colName in [
+				["LatitudeI"  , "latitudeI"  ],
+				["LongitudeI" , "longitudeI" ],
+				["Latitude"   , "latitude"   ],
+				["Longitude"  , "longitude"  ],
+				["Altitude"   , "altitude"   ],
+				["PDOP"       , "PDOP"       ],
+				["GroundSpeed", "groundSpeed"],
+			]:
+			for func in ("min", "max"):
+				selfAttr = getattr(self, func + filterName)
+				if selfAttr is not None:
+					clsAttr = getattr(cls, colName)
+					print(" ", func, filterName, colName, selfAttr, clsAttr)
+					if func == "min":
+						qry = qry.where(clsAttr is not None)
+						qry = qry.where(clsAttr >= selfAttr)
+					else:
+						qry = qry.where(clsAttr is not None)
+						qry = qry.where(clsAttr <= selfAttr)
+
+		if self.hasLocation is not None:
+			print(" HAS LOCATION", self.hasLocation)
+			qry = qry.where(cls.latitude is not None)
+
+		return qry
+
+PositionFilterQuery = Annotated[PositionFilterQueryParams, Depends(PositionFilterQueryParams)]
 
 
 """
