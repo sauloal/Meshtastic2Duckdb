@@ -136,6 +136,15 @@ class NodesPositionFilterQueryParams(TimedFilterQueryParams):
 	minAltitude   : Annotated[Optional[int  ], Query(default=None, ge=-50, le=100 ) ]
 	maxAltitude   : Annotated[Optional[int  ], Query(default=None, ge=-50, le=100 ) ]
 
+	@classmethod
+	def endpoints(cls):
+		return {
+			**{
+				"by-has-location": ("hasLocation"   , bool  , False),
+			},
+			**TimedFilterQueryParams.endpoints()
+		}
+
 	def __call__(self, session: dbgenerics.GenericSession, cls):
 		qry = TimedFilterQueryParams.__call__(self, session, cls)
 		qry = self._filter(qry, cls)
@@ -169,12 +178,30 @@ class NodesPositionFilterQueryParams(TimedFilterQueryParams):
 
 NodesPositionFilterQuery = Annotated[NodesPositionFilterQueryParams, Depends(NodesPositionFilterQueryParams)]
 
+
+
+
+
+
 class NodesFilterQueryParams(NodesPositionFilterQueryParams):
 	isFavorite    : Annotated[Optional[bool ], Query(default=None ) ]
 	userIds       : Annotated[Optional[str  ], Query(default=None ) ]
 	shortNames    : Annotated[Optional[str  ], Query(default=None ) ]
 	longNames     : Annotated[Optional[str  ], Query(default=None ) ]
 	roles         : Annotated[Optional[str  ], Query(default=None ) ]
+
+	@classmethod
+	def endpoints(cls):
+		return {
+			**{
+				"by-is-favorite": ("isFavorite", bool , False),
+				"by-user-id"    : ("userIds"   , str  , True ),
+				"by-short-name" : ("shortNames", str  , True ),
+				"by-long-name"  : ("longNames" , str  , True ),
+				"by-role"       : ("roles"     , Roles, True ),
+			},
+			**NodesPositionFilterQueryParams.endpoints()
+		}
 
 	def __call__(self, session: dbgenerics.GenericSession, cls):
 		qry = TimedFilterQueryParams.__call__(self, session, cls)
@@ -266,4 +293,48 @@ NodesFilterQuery = Annotated[NodesFilterQueryParams, Depends(NodesFilterQueryPar
     publicKey           : <class 'str'> zd9
     role                : <class 'str'> TRACKER
     shortName           : <class 'str'> SSSS
+"""
+
+"""
+@app.get( "/api/messages/nodes",                                   summary = "Get Nodes Endpoints",          description = "Get Nodes Endpoints",       response_description = "Nodes Endpoints",       tags = ["Nodes"])
+async def api_model_nodes_get():
+	return { "endpoints": ["list", "by-is-favorite", "by-user-id", "by-short-name", "by-long-name", "by-role", "by-has-location"] }
+
+@app.post("/api/messages/nodes",                                   summary = "Add Nodes Instances",          description = "Add Nodes Instances",       response_description = "None",                  tags = ["Nodes"],       status_code = status.HTTP_201_CREATED)
+async def api_model_nodes_post(     data: models.NodesClass,       session_manager: db.SessionManagerDepRW,  request: Request,                          response: Response) -> None:
+	return await api_model_post(data=data,                     session_manager=session_manager,          request=request,                           response=response )
+
+@app.get( "/api/messages/nodes/list",                              summary = "Get Nodes Instances",          description = "Get Nodes Instances",       response_description = "List of Nodes",         tags = ["Nodes"])
+async def api_model_nodes_list(                                    session_manager: db.SessionManagerDepRO,  request: Request,                          response: Response,     query_filter: models.Nodes.__filter__() ) -> list[models.NodesClass]:
+	return await api_model_get( model=models.Nodes,            session_manager=session_manager,          request=request,                           response=response,      query_filter=query_filter  )
+
+@app.get( "/api/messages/nodes/by-user-id/{user_id}",              summary = "Get Nodes Instances",          description = "Get Nodes Instances",       response_description = "List of Nodes",         tags = ["Nodes"])
+async def api_model_nodes_by_user_id(user_id: str,                 session_manager: db.SessionManagerDepRO,  request: Request,                          response: Response,     query_filter: models.Nodes.__filter__() ) -> list[models.NodeInfoClass]:
+	query_filter.userIds = [user_id]
+	return await api_model_get( model=models.Nodes,            session_manager=session_manager,          request=request,                           response=response,      query_filter=query_filter  )
+
+@app.get( "/api/messages/nodes/by-long-name/{long_name}",          summary = "Get Nodes Instances",          description = "Get Nodes Instances",       response_description = "List of Nodes",         tags = ["Nodes"])
+async def api_model_nodes_by_long_name(long_name: str,             session_manager: db.SessionManagerDepRO,  request: Request,                          response: Response,     query_filter: models.Nodes.__filter__() ) -> list[models.NodeInfoClass]:
+	query_filter.longNames = [long_name]
+	return await api_model_get( model=models.Nodes,            session_manager=session_manager,          request=request,                           response=response,      query_filter=query_filter  )
+
+@app.get( "/api/messages/nodes/by-short-name/{short_name}",        summary = "Get Nodes Instances",          description = "Get Nodes Instances",       response_description = "List of Nodes",         tags = ["Nodes"])
+async def api_model_nodes_by_short_name(short_name: str,           session_manager: db.SessionManagerDepRO,  request: Request,                          response: Response,     query_filter: models.Nodes.__filter__() ) -> list[models.NodeInfoClass]:
+	query_filter.shortNames = [short_name]
+	return await api_model_get( model=models.Nodes,            session_manager=session_manager,          request=request,                           response=response,      query_filter=query_filter  )
+
+@app.get( "/api/messages/nodes/by-role/{role}",                    summary = "Get Nodes Instances",          description = "Get Nodes Instances",       response_description = "List of Nodes",         tags = ["Nodes"])
+async def api_model_nodes_by_role(role: str,                       session_manager: db.SessionManagerDepRO,  request: Request,                          response: Response,     query_filter: models.Nodes.__filter__() ) -> list[models.NodeInfoClass]:
+	query_filter.roles = [role]
+	return await api_model_get( model=models.Nodes,            session_manager=session_manager,          request=request,                           response=response,      query_filter=query_filter  )
+
+@app.get( "/api/messages/nodes/by-is-favorite/{favorite}",         summary = "Get Nodes Instances",          description = "Get Nodes Instances",       response_description = "List of Nodes",         tags = ["Nodes"])
+async def api_model_nodes_by_is_favorite(favorite: bool,           session_manager: db.SessionManagerDepRO,  request: Request,                          response: Response,     query_filter: models.Nodes.__filter__() ) -> list[models.NodeInfoClass]:
+	query_filter.isFavorite = favorite
+	return await api_model_get( model=models.Nodes,            session_manager=session_manager,          request=request,                           response=response,      query_filter=query_filter  )
+
+@app.get( "/api/messages/nodes/by-has-location/{has-location}",    summary = "Get Nodes Instances",          description = "Get Nodes Instances",       response_description = "List of Nodes",         tags = ["Nodes"])
+async def api_model_nodes_by_has_location(has_location: bool,      session_manager: db.SessionManagerDepRO,  request: Request,                          response: Response,     query_filter: models.Nodes.__filter__() ) -> list[models.NodeInfoClass]:
+	query_filter.hasLocation = has_location
+	return await api_model_get( model=models.Nodes,            session_manager=session_manager,          request=request,                           response=response,      query_filter=query_filter  )
 """

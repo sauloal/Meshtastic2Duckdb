@@ -36,7 +36,14 @@ class SharedFilterQueryParams(BaseModel):
 		qry = sel.offset(self.offset).limit(self.limit)
 		return qry
 
+	@classmethod
+	def endpoints(cls):
+		return {}
+
 SharedFilterQuery = Annotated[SharedFilterQueryParams, Depends(SharedFilterQueryParams)]
+
+
+
 
 
 class TimedFilterQueryParams(SharedFilterQueryParams):
@@ -55,6 +62,16 @@ class TimedFilterQueryParams(SharedFilterQueryParams):
 			qry = qry.where(cls.gateway_receive_time <= self.until)
 
 		return qry
+
+	@classmethod
+	def endpoints(cls):
+		return {
+			**{
+				"since": ("since", int  , False),
+				"until": ("until", int  , False),
+			},
+			**SharedFilterQueryParams.endpoints()
+		}
 
 TimedFilterQuery = Annotated[TimedFilterQueryParams, Depends(TimedFilterQueryParams)]
 
