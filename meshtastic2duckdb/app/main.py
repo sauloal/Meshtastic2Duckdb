@@ -112,7 +112,7 @@ async def api_models_get():
 
 
 
-async def api_model_get( model: models.Message,      session_manager: db.SessionManagerDepRO, request: Request, response: Response, query_filter: models.SharedFilterQuery ) -> list:
+async def api_model_get( model: models.Message,      session_manager: db.SessionManagerDepRO, request: Request, response: Response, query_filter: models.SharedFilterQuery ) -> list[ models.Message]:
 	#print("api_model_get", "model", model, "session_manager", session_manager, "request", request, "response", response, "query_filter", query_filter)
 	#https://fastapi.tiangolo.com/tutorial/sql-databases/#read-heroes
 
@@ -121,7 +121,8 @@ async def api_model_get( model: models.Message,      session_manager: db.Session
 	return resp
 
 async def api_model_post( data: models.MessageClass, session_manager: db.SessionManagerDepRW, request: Request, response: Response ) -> None:
-	# print("api_model_post", "data", data, type(data), "session_manager", session_manager, "request", request, "response", response)
+	#print("api_model_post", "data", data, type(data), "session_manager", session_manager, "request", request, "response", response)
+	#print(dir(data))
 
 	orm = data.toORM()
 	#orm = models.class_to_ORM(data)
@@ -136,21 +137,21 @@ async def api_model_post( data: models.MessageClass, session_manager: db.Session
 
 
 
-def gen_endpoint(*, verb: str, endpoint: str, name: str, summary: str, description: str, model, session_manager_t, tags: list[str], filter_key:str=None, filter_is_list: bool=False, response_model=None, fixed_response=None, status_code=None):
+def gen_endpoint(*, verb: str, endpoint: str, name: str, summary: str, description: str, model: models.Message, session_manager_t, tags: list[str], filter_key:str=None, filter_is_list: bool=False, response_model=None, fixed_response=None, status_code=None):
 	assert verb in ("GET","POST")
-	alias = None
+	alias        = None
+	data_class   = model.__dataclass__()
+	query_filter = model.__filter__()
 
 	operation_id = f"{endpoint}_{verb}".lower().replace("/","_").replace("{","_").replace("}","_").replace(":","_").replace("-","_").replace("__","_").strip("_")
-	print(f"  operation_id {operation_id}")
+	#print(f"  operation_id {operation_id}")
 
 	if "{" in endpoint:
 		alias = endpoint.split("{")[1].split("}")[0]
-		print(f"  ALIAS {alias}")
+		#print(f"  ALIAS {alias}")
 
 	if fixed_response is not None:
 		assert verb == "GET"
-
-	query_filter = model.__filter__()
 
 	def mod_filter_key(filter_key:str = None, filter_is_list:bool = False, path_param: str = None):
 		if   filter_key is not None:
@@ -178,7 +179,9 @@ def gen_endpoint(*, verb: str, endpoint: str, name: str, summary: str, descripti
 					return fixed_response
 
 				mod_filter_key(filter_key=filter_key, filter_is_list=filter_is_list, path_param=path_param)
+
 				return await api_model_get(model=model, session_manager=session_manager,    request=request,  response=response, query_filter=query_filter)
+
 		else:
 			@app.get(
 				endpoint,
@@ -208,8 +211,10 @@ def gen_endpoint(*, verb: str, endpoint: str, name: str, summary: str, descripti
 				response_model = response_model,
 				status_code    = status_code
 			)
-			async def endpoint(                 data: model, session_manager: session_manager_t, request: Request, response: Response, query_filter: query_filter,  path_param: str = Path(alias=alias)) -> response_model:
+
+			async def endpoint(                 data: data_class, session_manager: session_manager_t, request: Request, response: Response, query_filter: query_filter,  path_param: str = Path(alias=alias)) -> response_model:
 				return await api_model_post(data=data  , session_manager=session_manager,    request=request,  response=response, path_param=path_param)
+
 		else:
 			@app.post(
 				endpoint,
@@ -221,7 +226,8 @@ def gen_endpoint(*, verb: str, endpoint: str, name: str, summary: str, descripti
 				response_model = response_model,
 				status_code    = status_code
 			)
-			async def endpoint(                 data: model, session_manager: session_manager_t, request: Request, response: Response, query_filter: query_filter) -> response_model:
+
+			async def endpoint(                 data: data_class, session_manager: session_manager_t, request: Request, response: Response, query_filter: query_filter) -> response_model:
 				return await api_model_post(data=data  , session_manager=session_manager,    request=request,  response=response)
 
 	return endpoint
