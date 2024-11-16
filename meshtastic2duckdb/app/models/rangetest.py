@@ -42,3 +42,17 @@ rxTime                  : <class 'int'> 17
 to                      : <class 'int'> 42
 toId                    : <class 'str'> ^all
 """
+
+"""
+@app.get( "/api/messages/rangetest",                               summary = "Get RangeTests Endpoints",     description = "Get RangeTests Endpoints",  response_description = "RangeTests Endpoints",  tags = ["RangeTests"])
+async def api_model_rangetest():
+	return { "endpoints": ["list"] }
+
+@app.post("/api/messages/rangetest",                               summary = "Add RangeTests Instance",      description = "Add RangeTests Instances",  response_description = "None",                  tags = ["RangeTests"],  status_code = status.HTTP_201_CREATED)
+async def api_model_rangetest_post( data: models.RangeTestClass,   session_manager: db.SessionManagerDepRW,  request: Request,                          response: Response ) -> None:
+	return await api_model_post(data=data,                     session_manager=session_manager,          request=request,                           response=response )
+
+@app.get( "/api/messages/rangetest/list",                          summary = "Get RangeTests Instances",     description = "Get RangeTests Instances",  response_description = "List of RangeTests",    tags = ["RangeTests"])
+async def api_model_rangetest_list(                                session_manager: db.SessionManagerDepRO,  request: Request,                          response: Response,     query_filter: models.RangeTest.__filter__() ) -> list[models.RangeTestClass]:
+	return await api_model_get( model=models.RangeTest,        session_manager=session_manager,          request=request,                           response=response,      query_filter=query_filter  )
+"""

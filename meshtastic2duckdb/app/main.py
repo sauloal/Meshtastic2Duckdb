@@ -92,21 +92,21 @@ async def root():
 	return ""
 
 @app.get("/livez",  response_class=HTMLResponse, status_code=status.HTTP_204_NO_CONTENT, include_in_schema=False)
-async def livez():
-	return ""
+async def livez() -> None:
+	return None
 
 @app.get("/readyz", response_class=HTMLResponse, status_code=status.HTTP_204_NO_CONTENT, include_in_schema=False)
-async def readyz():
-	return ""
+async def readyz() -> None:
+	return None
 
 @app.get("/api")
-async def api_get():
+async def api_get() -> dict[str, list[str]]:
 	return { "endpoints": ["messages"] }
 
 @app.get("/api/messages")
-async def api_models_get():
+async def api_models_get() -> dict[str, list[str]]:
 	# TODO: Get from database
-	return { "endpoints": ["NodeInfo", "Nodes", "RangeTest", "Telemetry", "TextMessage"] }
+	return { "endpoints": ["nodeinfo", "nodes", "position", "rangetest", "telemetry", "textmessage"] }
 
 
 
@@ -119,6 +119,8 @@ async def api_model_get( model: models.Message,      session_manager: db.Session
 	resp = model.Query(session_manager=session_manager, query_filter=query_filter)
 
 	return resp
+
+
 
 async def api_model_post( data: models.MessageClass, session_manager: db.SessionManagerDepRW, request: Request, response: Response ) -> None:
 	#print("api_model_post", "data", data, type(data), "session_manager", session_manager, "request", request, "response", response)
@@ -153,14 +155,14 @@ def gen_endpoint(*, verb: str, endpoint: str, name: str, summary: str, descripti
 	if fixed_response is not None:
 		assert verb == "GET"
 
-	def mod_filter_key(filter_key:str = None, filter_is_list:bool = False, path_param: str = None):
-		if   filter_key is not None:
-			assert hasattr(query_filter, filter_key)
+	def mod_filter_key(filter_query, filter_key:str, filter_is_list:bool, path_param: str):
+		if filter_key is not None:
+			assert hasattr(filter_query, filter_key), f"query_filter '{query_filter}' does not have filter_key '{filter_key}': {dir(query_filter)}. {query_filter.model_fields}"
 
 			if filter_is_list:
-				setattr(query_filter, filter_key, [path_param])
+				setattr(filter_query, filter_key, [path_param])
 			else:
-				setattr(query_filter, filter_key,  path_param)
+				setattr(filter_query, filter_key,  path_param)
 
 	if verb == "GET":
 		if alias is not None:
@@ -178,7 +180,7 @@ def gen_endpoint(*, verb: str, endpoint: str, name: str, summary: str, descripti
 				if fixed_response:
 					return fixed_response
 
-				mod_filter_key(filter_key=filter_key, filter_is_list=filter_is_list, path_param=path_param)
+				mod_filter_key(filter_query=query_filter, filter_key=filter_key, filter_is_list=filter_is_list, path_param=path_param)
 
 				return await api_model_get(model=model, session_manager=session_manager,    request=request,  response=response, query_filter=query_filter)
 
@@ -232,123 +234,14 @@ def gen_endpoint(*, verb: str, endpoint: str, name: str, summary: str, descripti
 
 	return endpoint
 
-models.NodeInfo.register(prefix="/api/messages", gen_endpoint=gen_endpoint, status=status, db_ro=db.SessionManagerDepRO, db_rw=db.SessionManagerDepRW)
-models.Nodes   .register(prefix="/api/messages", gen_endpoint=gen_endpoint, status=status, db_ro=db.SessionManagerDepRO, db_rw=db.SessionManagerDepRW)
+models.NodeInfo   .register(prefix="/api/messages", gen_endpoint=gen_endpoint, status=status, db_ro=db.SessionManagerDepRO, db_rw=db.SessionManagerDepRW)
+models.Nodes      .register(prefix="/api/messages", gen_endpoint=gen_endpoint, status=status, db_ro=db.SessionManagerDepRO, db_rw=db.SessionManagerDepRW)
+models.Position   .register(prefix="/api/messages", gen_endpoint=gen_endpoint, status=status, db_ro=db.SessionManagerDepRO, db_rw=db.SessionManagerDepRW)
+models.RangeTest  .register(prefix="/api/messages", gen_endpoint=gen_endpoint, status=status, db_ro=db.SessionManagerDepRO, db_rw=db.SessionManagerDepRW)
+models.Telemetry  .register(prefix="/api/messages", gen_endpoint=gen_endpoint, status=status, db_ro=db.SessionManagerDepRO, db_rw=db.SessionManagerDepRW)
+models.TextMessage.register(prefix="/api/messages", gen_endpoint=gen_endpoint, status=status, db_ro=db.SessionManagerDepRO, db_rw=db.SessionManagerDepRW)
 
 
-
-
-"""
-@app.get( "/api/messages/nodes",                                   summary = "Get Nodes Endpoints",          description = "Get Nodes Endpoints",       response_description = "Nodes Endpoints",       tags = ["Nodes"])
-async def api_model_nodes_get():
-	return { "endpoints": ["list", "by-is-favorite", "by-user-id", "by-short-name", "by-long-name", "by-role", "by-has-location"] }
-
-@app.post("/api/messages/nodes",                                   summary = "Add Nodes Instances",          description = "Add Nodes Instances",       response_description = "None",                  tags = ["Nodes"],       status_code = status.HTTP_201_CREATED)
-async def api_model_nodes_post(     data: models.NodesClass,       session_manager: db.SessionManagerDepRW,  request: Request,                          response: Response) -> None:
-	return await api_model_post(data=data,                     session_manager=session_manager,          request=request,                           response=response )
-
-@app.get( "/api/messages/nodes/list",                              summary = "Get Nodes Instances",          description = "Get Nodes Instances",       response_description = "List of Nodes",         tags = ["Nodes"])
-async def api_model_nodes_list(                                    session_manager: db.SessionManagerDepRO,  request: Request,                          response: Response,     query_filter: models.Nodes.__filter__() ) -> list[models.NodesClass]:
-	return await api_model_get( model=models.Nodes,            session_manager=session_manager,          request=request,                           response=response,      query_filter=query_filter  )
-
-@app.get( "/api/messages/nodes/by-user-id/{user_id}",              summary = "Get Nodes Instances",          description = "Get Nodes Instances",       response_description = "List of Nodes",         tags = ["Nodes"])
-async def api_model_nodes_by_user_id(user_id: str,                 session_manager: db.SessionManagerDepRO,  request: Request,                          response: Response,     query_filter: models.Nodes.__filter__() ) -> list[models.NodeInfoClass]:
-	query_filter.userIds = [user_id]
-	return await api_model_get( model=models.Nodes,            session_manager=session_manager,          request=request,                           response=response,      query_filter=query_filter  )
-
-@app.get( "/api/messages/nodes/by-long-name/{long_name}",          summary = "Get Nodes Instances",          description = "Get Nodes Instances",       response_description = "List of Nodes",         tags = ["Nodes"])
-async def api_model_nodes_by_long_name(long_name: str,             session_manager: db.SessionManagerDepRO,  request: Request,                          response: Response,     query_filter: models.Nodes.__filter__() ) -> list[models.NodeInfoClass]:
-	query_filter.longNames = [long_name]
-	return await api_model_get( model=models.Nodes,            session_manager=session_manager,          request=request,                           response=response,      query_filter=query_filter  )
-
-@app.get( "/api/messages/nodes/by-short-name/{short_name}",        summary = "Get Nodes Instances",          description = "Get Nodes Instances",       response_description = "List of Nodes",         tags = ["Nodes"])
-async def api_model_nodes_by_short_name(short_name: str,           session_manager: db.SessionManagerDepRO,  request: Request,                          response: Response,     query_filter: models.Nodes.__filter__() ) -> list[models.NodeInfoClass]:
-	query_filter.shortNames = [short_name]
-	return await api_model_get( model=models.Nodes,            session_manager=session_manager,          request=request,                           response=response,      query_filter=query_filter  )
-
-@app.get( "/api/messages/nodes/by-role/{role}",                    summary = "Get Nodes Instances",          description = "Get Nodes Instances",       response_description = "List of Nodes",         tags = ["Nodes"])
-async def api_model_nodes_by_role(role: str,                       session_manager: db.SessionManagerDepRO,  request: Request,                          response: Response,     query_filter: models.Nodes.__filter__() ) -> list[models.NodeInfoClass]:
-	query_filter.roles = [role]
-	return await api_model_get( model=models.Nodes,            session_manager=session_manager,          request=request,                           response=response,      query_filter=query_filter  )
-
-@app.get( "/api/messages/nodes/by-is-favorite/{favorite}",         summary = "Get Nodes Instances",          description = "Get Nodes Instances",       response_description = "List of Nodes",         tags = ["Nodes"])
-async def api_model_nodes_by_is_favorite(favorite: bool,           session_manager: db.SessionManagerDepRO,  request: Request,                          response: Response,     query_filter: models.Nodes.__filter__() ) -> list[models.NodeInfoClass]:
-	query_filter.isFavorite = favorite
-	return await api_model_get( model=models.Nodes,            session_manager=session_manager,          request=request,                           response=response,      query_filter=query_filter  )
-
-@app.get( "/api/messages/nodes/by-has-location/{has-location}",    summary = "Get Nodes Instances",          description = "Get Nodes Instances",       response_description = "List of Nodes",         tags = ["Nodes"])
-async def api_model_nodes_by_has_location(has_location: bool,      session_manager: db.SessionManagerDepRO,  request: Request,                          response: Response,     query_filter: models.Nodes.__filter__() ) -> list[models.NodeInfoClass]:
-	query_filter.hasLocation = has_location
-	return await api_model_get( model=models.Nodes,            session_manager=session_manager,          request=request,                           response=response,      query_filter=query_filter  )
-"""
-
-
-
-
-@app.get( "/api/messages/position",                                summary = "Get Position Endpoints",       description = "Get Position Endpoints",    response_description = "Position Endpoints",    tags = ["Position"])
-async def api_model_position_get():
-	return { "endpoints": ["list", "by-has-location"] }
-
-@app.post("/api/messages/position",                                summary = "Add Position Instance",        description = "Add Position Instances",    response_description = "None",                  tags = ["Position"],    status_code = status.HTTP_201_CREATED)
-async def api_model_position_post(  data: models.PositionClass,    session_manager: db.SessionManagerDepRW,  request: Request,                          response: Response ) -> None:
-	return await api_model_post(data=data,                     session_manager=session_manager,          request=request,                           response=response )
-
-@app.get( "/api/messages/position/list",                           summary = "Get Position Instances",       description = "Get Position Instances",    response_description = "List of Position",      tags = ["Position"])
-async def api_model_position_list(                                 session_manager: db.SessionManagerDepRO,  request: Request,                          response: Response,     query_filter: models.Position.__filter__() ) -> list[models.PositionClass]:
-	return await api_model_get( model=models.Position,         session_manager=session_manager,          request=request,                           response=response,      query_filter=query_filter  )
-
-@app.get( "/api/messages/position/by-has-location/{has-location}", summary = "Get Position Instances",       description = "Get Position Instances",    response_description = "List of Position",      tags = ["Position"])
-async def api_model_position_by_has_location(has_location: bool,   session_manager: db.SessionManagerDepRO,  request: Request,                          response: Response,     query_filter: models.Position.__filter__() ) -> list[models.NodeInfoClass]:
-	query_filter.hasLocation = has_location
-	return await api_model_get( model=models.Position,         session_manager=session_manager,          request=request,                           response=response,      query_filter=query_filter  )
-
-
-
-
-
-@app.get( "/api/messages/rangetest",                               summary = "Get RangeTests Endpoints",     description = "Get RangeTests Endpoints",  response_description = "RangeTests Endpoints",  tags = ["RangeTests"])
-async def api_model_rangetest():
-	return { "endpoints": ["list"] }
-
-@app.post("/api/messages/rangetest",                               summary = "Add RangeTests Instance",      description = "Add RangeTests Instances",  response_description = "None",                  tags = ["RangeTests"],  status_code = status.HTTP_201_CREATED)
-async def api_model_rangetest_post( data: models.RangeTestClass,   session_manager: db.SessionManagerDepRW,  request: Request,                          response: Response ) -> None:
-	return await api_model_post(data=data,                     session_manager=session_manager,          request=request,                           response=response )
-
-@app.get( "/api/messages/rangetest/list",                          summary = "Get RangeTests Instances",     description = "Get RangeTests Instances",  response_description = "List of RangeTests",    tags = ["RangeTests"])
-async def api_model_rangetest_list(                                session_manager: db.SessionManagerDepRO,  request: Request,                          response: Response,     query_filter: models.RangeTest.__filter__() ) -> list[models.RangeTestClass]:
-	return await api_model_get( model=models.RangeTest,        session_manager=session_manager,          request=request,                           response=response,      query_filter=query_filter  )
-
-
-
-
-
-@app.get( "/api/messages/telemetry",                               summary = "Get Telemetry Endpoints",      description = "Get Telemetry Endpoints",   response_description = "Telemetry Endpoints",   tags = ["Telemetry"])
-async def api_model_telemetry_get():
-	return { "endpoints": ["list"] }
-
-@app.post("/api/messages/telemetry",                               summary = "Add Telemetry Instance",       description = "Add Telemetry Instances",   response_description = "None",                  tags = ["Telemetry"],   status_code = status.HTTP_201_CREATED)
-async def api_model_telemetry_post( data: models.TelemetryClass,   session_manager: db.SessionManagerDepRW,  request: Request,                          response: Response ) -> None:
-	return await api_model_post(data=data,                     session_manager=session_manager,          request=request,                           response=response )
-
-@app.get( "/api/messages/telemetry/list",                          summary = "Get Telemetry Instances",      description = "Get Telemetry Instances",   response_description = "List of Telemetry",     tags = ["Telemetry"])
-async def api_model_telemetry_list(                                session_manager: db.SessionManagerDepRO,  request: Request,                          response: Response,     query_filter: models.Telemetry.__filter__() ) -> list[models.TelemetryClass]:
-	return await api_model_get( model=models.Telemetry,        session_manager=session_manager,          request=request,                           response=response,      query_filter=query_filter  )
-
-
-
-
-
-@app.get( "/api/messages/textmessage",                              summary = "Get TextMessage Endpoints",   description = "Get TextMessage Endpoints", response_description = "TextMessage Endpoints", tags = ["TextMessage"])
-async def api_model_textmessage_get():
-	return { "endpoints": ["list"] }
-
-@app.post("/api/messages/textmessage",                              summary = "Add TextMessage Instance" ,   description = "Add TextMessage Instances", response_description = "None"                 , tags = ["TextMessage"], status_code = status.HTTP_201_CREATED)
-async def api_model_textmessage_post(data: models.TextMessageClass, session_manager: db.SessionManagerDepRW, request: Request,                          response: Response ) -> None:
-	return await api_model_post( data=data,                     session_manager=session_manager,         request=request,                           response=response )
-
-@app.get( "/api/messages/textmessage/list",                         summary = "Get TextMessage Instances",   description = "Get TextMessage Instances", response_description = "List of TextMessage"  , tags = ["TextMessage"])
-async def api_model_textmessage_list(                               session_manager: db.SessionManagerDepRO, request: Request,                          response: Response,     query_filter: models.TextMessage.__filter__() ) -> list[models.TextMessageClass]:
-	return await api_model_get( model=models.TextMessage,       session_manager=session_manager,         request=request,                           response=response,      query_filter=query_filter  )
 
 
 

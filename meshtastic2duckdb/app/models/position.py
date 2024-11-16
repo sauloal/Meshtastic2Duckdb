@@ -66,21 +66,72 @@ class PositionFilterQueryParams(TimedFilterQueryParams):
 	minLongitudeI : Annotated[Optional[int  ], Query(default=None, ge=-90_000_000, le=90_000_000 ) ]
 	maxLongitudeI : Annotated[Optional[int  ], Query(default=None, ge=-90_000_000, le=90_000_000 ) ]
 
-	minLatitude   : Annotated[Optional[float], Query(default=None, ge=-90, le=90 ) ]
-	maxLatitude   : Annotated[Optional[float], Query(default=None, ge=-90, le=90 ) ]
+	minLatitude   : Annotated[Optional[float], Query(default=None, ge=-90,         le=90         ) ]
+	maxLatitude   : Annotated[Optional[float], Query(default=None, ge=-90,         le=90         ) ]
 
-	minLongitude  : Annotated[Optional[float], Query(default=None, ge=-90, le=90 ) ]
-	maxLongitude  : Annotated[Optional[float], Query(default=None, ge=-90, le=90 ) ]
+	minLongitude  : Annotated[Optional[float], Query(default=None, ge=-90,         le=90         ) ]
+	maxLongitude  : Annotated[Optional[float], Query(default=None, ge=-90,         le=90         ) ]
 
-	minAltitude   : Annotated[Optional[int  ], Query(default=None, ge=-50, le=100 ) ]
-	maxAltitude   : Annotated[Optional[int  ], Query(default=None, ge=-50, le=100 ) ]
+	minAltitude   : Annotated[Optional[int  ], Query(default=None, ge=-50,         le=100        ) ]
+	maxAltitude   : Annotated[Optional[int  ], Query(default=None, ge=-50,         le=100        ) ]
 
-	minPDOP       : Annotated[Optional[int  ], Query(default=None, ge=0, le=2048 ) ]
-	maxPDOP       : Annotated[Optional[int  ], Query(default=None, ge=0, le=2048 ) ]
+	minPDOP       : Annotated[Optional[int  ], Query(default=None, ge=0,           le=2048       ) ]
+	maxPDOP       : Annotated[Optional[int  ], Query(default=None, ge=0,           le=2048       ) ]
 
-	minGroundSpeed: Annotated[Optional[int  ], Query(default=None, ge=0, le=256 ) ]
-	maxGroundSpeed: Annotated[Optional[int  ], Query(default=None, ge=0, le=256) ]
+	minGroundSpeed: Annotated[Optional[int  ], Query(default=None, ge=0,           le=256        ) ]
+	maxGroundSpeed: Annotated[Optional[int  ], Query(default=None, ge=0,           le=256        ) ]
 
+	@classmethod
+	def endpoints(cls):
+		return {
+			**{
+				"by-has-location": ("hasLocation"   , bool  , False),
+			},
+			**TimedFilterQueryParams.endpoints()
+		}
+
+	def _filter(self, qry, cls):
+		#print(f"PositionFilterQueryParams {self} qry {qry} cls {cls}")
+
+		for filterName, colName in [
+				["LatitudeI"  , "latitudeI"  ],
+				["LongitudeI" , "longitudeI" ],
+				["Latitude"   , "latitude"   ],
+				["Longitude"  , "longitude"  ],
+				["Altitude"   , "altitude"   ],
+				["PDOP"       , "PDOP"       ],
+				["GroundSpeed", "GroundSpeed"],
+			]:
+			for func in ("min", "max"):
+				selfAttr = getattr(self, func + filterName)
+				if selfAttr is not None:
+					clsAttr = getattr(cls, colName)
+					print(" ", func, filterName, colName, selfAttr, clsAttr)
+					if func == "min":
+						qry = qry.where( clsAttr != None     )
+						qry = qry.where( clsAttr >= selfAttr )
+					else:
+						qry = qry.where( clsAttr != None     )
+						qry = qry.where( clsAttr <= selfAttr )
+
+		if self.hasLocation is not None:
+			self.hasLocation = str(self.hasLocation).lower() in "t,y,true,yes,1".split(",")
+
+			#print(" HAS LOCATION", self.hasLocation)
+
+			if self.hasLocation:
+				qry = qry.where( cls.latitude != None )
+			else:
+				qry = qry.where( cls.latitude == None )
+
+		return qry
+
+	def __call__(self, session: dbgenerics.GenericSession, cls):
+		qry = TimedFilterQueryParams.__call__(self, session, cls)
+		qry = self._filter(qry, cls)
+		return qry
+
+	"""
 	def __call__(self, session: dbgenerics.GenericSession, cls):
 		qry = TimedFilterQueryParams.__call__(self, session, cls)
 
@@ -110,9 +161,29 @@ class PositionFilterQueryParams(TimedFilterQueryParams):
 			qry = qry.where(cls.latitude is not None)
 
 		return qry
+	"""
 
 PositionFilterQuery = Annotated[PositionFilterQueryParams, Depends(PositionFilterQueryParams)]
 
+"""
+@app.get( "/api/messages/position",                                summary = "Get Position Endpoints",       description = "Get Position Endpoints",    response_description = "Position Endpoints",    tags = ["Position"])
+async def api_model_position_get():
+	return { "endpoints": ["list", "by-has-location"] }
+
+@app.post("/api/messages/position",                                summary = "Add Position Instance",        description = "Add Position Instances",    response_description = "None",                  tags = ["Position"],    status_code = status.HTTP_201_CREATED)
+async def api_model_position_post(  data: models.PositionClass,    session_manager: db.SessionManagerDepRW,  request: Request,                          response: Response ) -> None:
+	return await api_model_post(data=data,                     session_manager=session_manager,          request=request,                           response=response )
+
+@app.get( "/api/messages/position/list",                           summary = "Get Position Instances",       description = "Get Position Instances",    response_description = "List of Position",      tags = ["Position"])
+async def api_model_position_list(                                 session_manager: db.SessionManagerDepRO,  request: Request,                          response: Response,     query_filter: models.Position.__filter__() ) -> list[models.PositionClass]:
+	return await api_model_get( model=models.Position,         session_manager=session_manager,          request=request,                           response=response,      query_filter=query_filter  )
+
+@app.get( "/api/messages/position/by-has-location/{has-location}", summary = "Get Position Instances",       description = "Get Position Instances",    response_description = "List of Position",      tags = ["Position"])
+async def api_model_position_by_has_location(has_location: bool,   session_manager: db.SessionManagerDepRO,  request: Request,                          response: Response,     query_filter: models.Position.__filter__() ) -> list[models.NodeInfoClass]:
+	query_filter.hasLocation = has_location
+	return await api_model_get( model=models.Position,         session_manager=session_manager,          request=request,                           response=response,      query_filter=query_filter  )
+
+"""
 
 """
 Received

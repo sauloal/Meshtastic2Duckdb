@@ -14,7 +14,7 @@ from fastapi import HTTPException
 import pydantic
 from pydantic import BaseModel
 
-from sqlmodel import Field, Sequence, SQLModel, Column, Session
+from sqlmodel import Field, Sequence, SQLModel, Column, Session, or_
 
 from ._query import SharedFilterQuery, SharedFilterQueryParams, TimedFilterQuery, TimedFilterQueryParams
 from .. import dbgenerics

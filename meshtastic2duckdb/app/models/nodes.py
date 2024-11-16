@@ -127,28 +127,28 @@ class NodesPositionFilterQueryParams(TimedFilterQueryParams):
 	minLongitudeI : Annotated[Optional[int  ], Query(default=None, ge=-90_000_000, le=90_000_000 ) ]
 	maxLongitudeI : Annotated[Optional[int  ], Query(default=None, ge=-90_000_000, le=90_000_000 ) ]
 
-	minLatitude   : Annotated[Optional[float], Query(default=None, ge=-90, le=90 ) ]
-	maxLatitude   : Annotated[Optional[float], Query(default=None, ge=-90, le=90 ) ]
+	minLatitude   : Annotated[Optional[float], Query(default=None, ge=-90,         le=90         ) ]
+	maxLatitude   : Annotated[Optional[float], Query(default=None, ge=-90,         le=90         ) ]
 
-	minLongitude  : Annotated[Optional[float], Query(default=None, ge=-90, le=90 ) ]
-	maxLongitude  : Annotated[Optional[float], Query(default=None, ge=-90, le=90 ) ]
+	minLongitude  : Annotated[Optional[float], Query(default=None, ge=-90,         le=90         ) ]
+	maxLongitude  : Annotated[Optional[float], Query(default=None, ge=-90,         le=90         ) ]
 
-	minAltitude   : Annotated[Optional[int  ], Query(default=None, ge=-50, le=100 ) ]
-	maxAltitude   : Annotated[Optional[int  ], Query(default=None, ge=-50, le=100 ) ]
+	minAltitude   : Annotated[Optional[int  ], Query(default=None, ge=-50,         le=100        ) ]
+	maxAltitude   : Annotated[Optional[int  ], Query(default=None, ge=-50,         le=100        ) ]
 
 	@classmethod
 	def endpoints(cls):
 		return {
 			**{
-				"by-has-location": ("hasLocation"   , bool  , False),
+				"by-user-id"     : ("userIds"    , str  , True ),
+				"by-short-name"  : ("shortNames" , str  , True ),
+				"by-long-name"   : ("longNames"  , str  , True ),
+				"by-hw-model"    : ("hwModels"   , str  , True ),
+				"by-role"        : ("roles"      , Roles, True ),
+				"by-has-location": ("hasLocation", bool , False),
 			},
 			**TimedFilterQueryParams.endpoints()
 		}
-
-	def __call__(self, session: dbgenerics.GenericSession, cls):
-		qry = TimedFilterQueryParams.__call__(self, session, cls)
-		qry = self._filter(qry, cls)
-		return qry
 
 	def _filter(self, qry, cls):
 		for filterName, colName in [
@@ -164,17 +164,29 @@ class NodesPositionFilterQueryParams(TimedFilterQueryParams):
 					clsAttr = getattr(cls, colName)
 					print(" ", func, filterName, colName, selfAttr, clsAttr)
 					if func == "min":
-						qry = qry.where(clsAttr is not None)
-						qry = qry.where(clsAttr >= selfAttr)
+						qry = qry.where( clsAttr != None     )
+						qry = qry.where( clsAttr >= selfAttr )
 					else:
-						qry = qry.where(clsAttr is not None)
-						qry = qry.where(clsAttr <= selfAttr)
+						qry = qry.where( clsAttr != None     )
+						qry = qry.where( clsAttr <= selfAttr )
 
 		if self.hasLocation is not None:
+			self.hasLocation = str(self.hasLocation).lower() in "t,y,true,yes,1".split(",")
+
 			print(" HAS LOCATION", self.hasLocation)
-			qry = qry.where(cls.latitude is not None)
+
+			if self.hasLocation:
+				qry = qry.where( cls.latitude != None )
+			else:
+				qry = qry.where( cls.latitude == None )
 
 		return qry
+
+	def __call__(self, session: dbgenerics.GenericSession, cls):
+		qry = TimedFilterQueryParams.__call__(self, session, cls)
+		qry = self._filter(qry, cls)
+		return qry
+
 
 NodesPositionFilterQuery = Annotated[NodesPositionFilterQueryParams, Depends(NodesPositionFilterQueryParams)]
 
@@ -208,7 +220,10 @@ class NodesFilterQueryParams(NodesPositionFilterQueryParams):
 
 		if self.isFavorite is not None:
 			print(" IS FAVORITE", self.isFavorite)
-			qry = qry.where(cls.isFavorite == self.isFavorite)
+			if self.isFavorite:
+				qry = qry.where(      cls.isFavorite == self.isFavorite )
+			else:
+				qry = qry.where( or_((cls.isFavorite == self.isFavorite), (cls.isFavorite == None)) )
 
 		if self.userIds is not None:
 			print(" USER IDS    ", self.userIds)

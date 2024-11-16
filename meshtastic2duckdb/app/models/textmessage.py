@@ -43,24 +43,40 @@ class TextMessageFilterQueryParams(TimedFilterQueryParams):
 	isPkiEncrypted: Annotated[Optional[bool ], Query(default=None ) ]
 	channels      : Annotated[Optional[str  ], Query(default=None ) ]
 
+	@classmethod
+	def endpoints(cls):
+		return {
+			**{
+				"by-is-encrypted": ("isPkiEncrypted", bool , False ),
+				"by-channel"     : ("channels"      , int  , True  ),
+			},
+			**TimedFilterQueryParams.endpoints()
+		}
+
 	def __call__(self, session: dbgenerics.GenericSession, cls):
 		qry = TimedFilterQueryParams.__call__(self, session, cls)
 
 		if self.isPkiEncrypted is not None:
+			self.isPkiEncrypted = str(self.isPkiEncrypted).lower()         in "t,y,true,yes,1".split(",")
 			print(" IS PKI ENCRYPTED", self.isPkiEncrypted)
 			qry = qry.where(cls.pkiEncrypted == self.isPkiEncrypted)
 
 		if self.channels is not None:
-			print(" CHANNELS        ", self.channels)
-			channels = self.channels.split(',')
+			channels = self.channels
+			if isinstance(channels, str):
+				channels = channels.split(',')
+
+			print(" CHANNELS        ", channels)
+
 			if channels:
 				for b,c in enumerate(channels):
 					try:
 						channels[b] = int(c)
 						assert channels[b] < 16
 					except:
-						raise HTTPException(status_code=400, detail="INVALID CHANNEL: " + ",".join(c for c in channels))
+						raise HTTPException(status_code=400, detail="INVALID CHANNEL: " + ",".join(str(c) for c in channels))
 
+				print(" CHANNELS        ", channels)
 				qry = qry.where(cls.channel.in_( channels ))
 
 		return qry
@@ -131,3 +147,16 @@ to                      : <class 'int'> 42
 toId                    : <class 'str'> ^all
 """
 
+"""
+@app.get( "/api/messages/textmessage",                              summary = "Get TextMessage Endpoints",   description = "Get TextMessage Endpoints", response_description = "TextMessage Endpoints", tags = ["TextMessage"])
+async def api_model_textmessage_get():
+	return { "endpoints": ["list"] }
+
+@app.post("/api/messages/textmessage",                              summary = "Add TextMessage Instance" ,   description = "Add TextMessage Instances", response_description = "None"                 , tags = ["TextMessage"], status_code = status.HTTP_201_CREATED)
+async def api_model_textmessage_post(data: models.TextMessageClass, session_manager: db.SessionManagerDepRW, request: Request,                          response: Response ) -> None:
+	return await api_model_post( data=data,                     session_manager=session_manager,         request=request,                           response=response )
+
+@app.get( "/api/messages/textmessage/list",                         summary = "Get TextMessage Instances",   description = "Get TextMessage Instances", response_description = "List of TextMessage"  , tags = ["TextMessage"])
+async def api_model_textmessage_list(                               session_manager: db.SessionManagerDepRO, request: Request,                          response: Response,     query_filter: models.TextMessage.__filter__() ) -> list[models.TextMessageClass]:
+	return await api_model_get( model=models.TextMessage,       session_manager=session_manager,         request=request,                           response=response,      query_filter=query_filter  )
+"""

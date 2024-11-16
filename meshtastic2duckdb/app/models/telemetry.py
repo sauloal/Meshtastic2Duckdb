@@ -60,42 +60,54 @@ class Telemetry(Message, SQLModel, table=True):
 	id                  : int64 | None = Field(primary_key=True, sa_column_kwargs={"server_default": telemetry_id_seq.next_value()}, nullable=True)
 
 
-"""
-from enum import Enum
-class Roles(str, Enum):
-	#https://meshtastic.org/docs/configuration/radio/device/
-	CLIENT         : str = "CLIENT"
-	CLIENT_MUTE    : str = "CLIENT_MUTE"
-	CLIENT_HIDDEN  : str = "CLIENT_HIDDEN"
-	TRACKER        : str = "TRACKER"
-	LOST_AND_FOUND : str = "LOST_AND_FOUND"
-	SENSOR         : str = "SENSOR"
-	TAK            : str = "TAK"
-	TAK_TRACKER    : str = "TAK_TRACKER"
-	REPEATER       : str = "REPEATER"
-	ROUTER         : str = "ROUTER"
-"""
-
 class TelemetryFilterQueryParams(TimedFilterQueryParams):
 	minBatteryLevel: Annotated[Optional[int  ], Query(default=None, ge=0  , le=100 ) ]
+	maxBatteryLevel: Annotated[Optional[int  ], Query(default=None, ge=0  , le=100 ) ]
 	hasLux         : Annotated[Optional[bool ], Query(default=None, ge=0           ) ]
 	hasTemperature : Annotated[Optional[bool ], Query(default=None, ge=-50, le=100 ) ]
+
+	@classmethod
+	def endpoints(cls):
+		return {
+			**{
+				"by-min-batt"       : ("minBatteryLevel", int , False),
+				"by-max-batt"       : ("maxBatteryLevel", int , False),
+				"by-has-lux"        : ("hasLux"         , bool, False),
+				"by-has-temperature": ("hasTemperature" , bool, False),
+			},
+			**TimedFilterQueryParams.endpoints()
+		}
 
 	def __call__(self, session: dbgenerics.GenericSession, cls):
 		qry = TimedFilterQueryParams.__call__(self, session, cls)
 
 		if self.minBatteryLevel is not None:
+			self.minBatteryLevel = int(self.minBatteryLevel)
 			print(" MIN BAT     ", self.minBatteryLevel)
-			qry = qry.where(cls.batteryLevel is not None            )
-			qry = qry.where(cls.batteryLevel >= self.minBatteryLevel)
+			qry = qry.where( cls.batteryLevel != None                 )
+			qry = qry.where( cls.batteryLevel >= self.minBatteryLevel )
+
+		if self.maxBatteryLevel is not None:
+			self.maxBatteryLevel = int(self.maxBatteryLevel)
+			print(" MAX BAT     ", self.maxBatteryLevel)
+			qry = qry.where( cls.batteryLevel != None                 )
+			qry = qry.where( cls.batteryLevel <= self.maxBatteryLevel )
 
 		if self.hasLux is not None:
+			self.hasLux         = str(self.hasLux).lower()         in "t,y,true,yes,1".split(",")
 			print(" HAS LUX     ", self.hasLux)
-			qry = qry.where(cls.lux is not None)
+			if self.hasLux:
+				qry = qry.where( cls.lux != None )
+			else:
+				qry = qry.where( cls.lux == None )
 
 		if self.hasTemperature is not None:
+			self.hasTemperature = str(self.hasTemperature).lower() in "t,y,true,yes,1".split(",")
 			print(" HAS TEMPERATURE", self.hasTemperature)
-			qry = qry.where(cls.temperature is not None)
+			if self.hasTemperature:
+				qry = qry.where( cls.temperature != None )
+			else:
+				qry = qry.where( cls.temperature == None )
 
 		return qry
 
@@ -164,4 +176,36 @@ rxSnr                   : <class 'float'> 16.5
 rxTime                  : <class 'int'> 364
 to                      : <class 'int'> 42
 toId                    : <class 'str'> ^all
+"""
+
+
+"""
+from enum import Enum
+class Roles(str, Enum):
+	#https://meshtastic.org/docs/configuration/radio/device/
+	CLIENT         : str = "CLIENT"
+	CLIENT_MUTE    : str = "CLIENT_MUTE"
+	CLIENT_HIDDEN  : str = "CLIENT_HIDDEN"
+	TRACKER        : str = "TRACKER"
+	LOST_AND_FOUND : str = "LOST_AND_FOUND"
+	SENSOR         : str = "SENSOR"
+	TAK            : str = "TAK"
+	TAK_TRACKER    : str = "TAK_TRACKER"
+	REPEATER       : str = "REPEATER"
+	ROUTER         : str = "ROUTER"
+"""
+
+
+"""
+@app.get( "/api/messages/telemetry",                               summary = "Get Telemetry Endpoints",      description = "Get Telemetry Endpoints",   response_description = "Telemetry Endpoints",   tags = ["Telemetry"])
+async def api_model_telemetry_get():
+	return { "endpoints": ["list"] }
+
+@app.post("/api/messages/telemetry",                               summary = "Add Telemetry Instance",       description = "Add Telemetry Instances",   response_description = "None",                  tags = ["Telemetry"],   status_code = status.HTTP_201_CREATED)
+async def api_model_telemetry_post( data: models.TelemetryClass,   session_manager: db.SessionManagerDepRW,  request: Request,                          response: Response ) -> None:
+	return await api_model_post(data=data,                     session_manager=session_manager,          request=request,                           response=response )
+
+@app.get( "/api/messages/telemetry/list",                          summary = "Get Telemetry Instances",      description = "Get Telemetry Instances",   response_description = "List of Telemetry",     tags = ["Telemetry"])
+async def api_model_telemetry_list(                                session_manager: db.SessionManagerDepRO,  request: Request,                          response: Response,     query_filter: models.Telemetry.__filter__() ) -> list[models.TelemetryClass]:
+	return await api_model_get( model=models.Telemetry,        session_manager=session_manager,          request=request,                           response=response,      query_filter=query_filter  )
 """
