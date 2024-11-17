@@ -7,3 +7,5 @@ duckdb-engine
 
 fastapi[standard]
 sqlmodel
+jinja2
+bokeh

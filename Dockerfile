@@ -2,7 +2,7 @@ FROM ubuntu:22.04
 
 RUN apt clean all \
 &&  apt update \
-&&  apt install -y make python3-venv curl unzip \
+&&  apt install -y make python3-venv curl unzip wget \
 &&  apt clean all
 
 COPY ./requirements.txt ./Makefile /data/
