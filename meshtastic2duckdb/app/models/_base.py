@@ -8,7 +8,7 @@ from typing import Annotated, Optional, Generator, Literal
 
 from sqlalchemy             import BigInteger, SmallInteger, Integer, Text, Float, Boolean, LargeBinary
 
-from fastapi import Depends, Query
+from fastapi import FastAPI, Depends, Query
 from fastapi import HTTPException
 
 import pydantic
@@ -112,11 +112,12 @@ class ModelBase:
 		#return cls(**self.model_dump())
 
 	@classmethod
-	def register(cls, prefix: str, gen_endpoint, status, db_ro, db_rw):
+	def register(cls, app: FastAPI, prefix: str, gen_endpoint, status, db_ro, db_rw):
 		name      = cls.__name__
-		nick      = name.lower()
 		filters   = cls.__filter__()
 		data_cls  = cls.__dataclass__()
+
+		nick      = name.lower()
 		filter_by = filters.endpoints()
 
 		endpoints = { "endpoints": ["", "list"] + list(filter_by.keys()) }
@@ -124,15 +125,15 @@ class ModelBase:
 		prefix_u  = f"{prefix}/{nick}"
 
 		if True:
-			gen_endpoint(verb="GET",  endpoint=f"{prefix_u}",                                   response_model=dict[str, list[str]], fixed_response=endpoints,                                      name=f"{name} Get",                       summary=f"Get {name} Endpoints",             description="Get {name} Endpoints",             tags=[name], filter_key=None,      filter_is_list=False,   model=cls, session_manager_t=db_ro)
-			gen_endpoint(verb="POST", endpoint=f"{prefix_u}",                                   response_model=None,                 fixed_response=None,      status_code=status.HTTP_201_CREATED, name=f"{name} Add",                       summary=f"Add {name}",                       description="Add {name}",                       tags=[name], filter_key=None,      filter_is_list=False,   model=cls, session_manager_t=db_rw)
+			gen_endpoint(app=app, verb="GET",  endpoint=f"{prefix_u}",                                   response_model=dict[str, list[str]], fixed_response=endpoints,                                      name=f"{name} Get",                       summary=f"Get {name} Endpoints",             description="Get {name} Endpoints",             tags=[name], filter_key=None,      filter_is_list=False,   model=cls, session_manager_t=db_ro)
+			gen_endpoint(app=app, verb="POST", endpoint=f"{prefix_u}",                                   response_model=None,                 fixed_response=None,      status_code=status.HTTP_201_CREATED, name=f"{name} Add",                       summary=f"Add {name}",                       description="Add {name}",                       tags=[name], filter_key=None,      filter_is_list=False,   model=cls, session_manager_t=db_rw)
 
-			gen_endpoint(verb="GET",  endpoint=f"{prefix_u}/list",                              response_model=list[data_cls],       fixed_response=None,      status_code=None,                    name=f"{name} List",                      summary=f"Get {name} List",                  description="Get {name} List",                  tags=[name], filter_key=None,      filter_is_list=False,   model=cls, session_manager_t=db_ro)
+			gen_endpoint(app=app, verb="GET",  endpoint=f"{prefix_u}/list",                              response_model=list[data_cls],       fixed_response=None,      status_code=None,                    name=f"{name} List",                      summary=f"Get {name} List",                  description="Get {name} List",                  tags=[name], filter_key=None,      filter_is_list=False,   model=cls, session_manager_t=db_ro)
 
 
 		for filter_endpoint, (attr_name, filter_type, is_list) in filter_by.items():
 			filter_endpoint_str = filter_endpoint.replace('-', ' ')
-			gen_endpoint(verb="GET" , endpoint=f"{prefix_u}/{filter_endpoint}/{{{attr_name}}}", response_model=list[data_cls],       fixed_response=None,      status_code=None,                    name=f"{name} Get {filter_endpoint_str}", summary=f"Get {name} {filter_endpoint_str}", description="Get {name} {filter_endpoint_str}", tags=[name], filter_key=attr_name, filter_is_list=is_list, model=cls, session_manager_t=db_ro)
+			gen_endpoint(app=app, verb="GET" , endpoint=f"{prefix_u}/{filter_endpoint}/{{{attr_name}}}", response_model=list[data_cls],       fixed_response=None,      status_code=None,                    name=f"{name} Get {filter_endpoint_str}", summary=f"Get {name} {filter_endpoint_str}", description="Get {name} {filter_endpoint_str}", tags=[name], filter_key=attr_name, filter_is_list=is_list, model=cls, session_manager_t=db_ro)
 
 
 

@@ -33,6 +33,8 @@ help:
 	@echo "  docker-up-server-dev"
 	@echo "  docker-down"
 	@echo "  docker-logs"
+	@echo "  docker-logs-logger"
+	@echo "  docker-logs-server"
 	@echo "  docker-ps"
 	@echo "  docker-run-logger"
 	@echo "  docker-run-server"
@@ -161,7 +163,7 @@ install:
 .PHONY: docker-build docker-config
 .PHONY: docker-restart docker-restart-logger docker-restart-server
 .PHONY: docker-up docker-up-logger docker-up-server docker-up-server-dev
-.PHONY: docker-down docker-logs docker-ps
+.PHONY: docker-down docker-logs docker-logs-logger docker-logs-server docker-ps
 .PHONY: docker-run-logger docker-run-server
 
 docker-build:
@@ -198,6 +200,12 @@ docker-down:
 
 docker-logs:
 	docker compose logs -f
+
+docker-logs-logger:
+	docker compose logs -f logger
+
+docker-logs-server:
+	docker compose logs -f server
 
 docker-ps:
 	docker compose ps

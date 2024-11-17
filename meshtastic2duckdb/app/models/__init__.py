@@ -1,5 +1,6 @@
 from ._message    import MessageClass
 from ._base       import SharedFilterQuery, TimedFilterQuery
+from ._gen        import gen_endpoint
 
 from .nodeinfo    import *
 from .nodes       import *
@@ -50,4 +51,12 @@ def class_to_ORM(cls):
     # print("orm_inst      ", orm_inst)
 
     return orm_inst
+
+def register(app, prefix, status, db):
+	NodeInfo   .register(app=app, prefix=prefix, gen_endpoint=gen_endpoint, status=status, db_ro=db.SessionManagerDepRO, db_rw=db.SessionManagerDepRW)
+	Nodes      .register(app=app, prefix=prefix, gen_endpoint=gen_endpoint, status=status, db_ro=db.SessionManagerDepRO, db_rw=db.SessionManagerDepRW)
+	Position   .register(app=app, prefix=prefix, gen_endpoint=gen_endpoint, status=status, db_ro=db.SessionManagerDepRO, db_rw=db.SessionManagerDepRW)
+	RangeTest  .register(app=app, prefix=prefix, gen_endpoint=gen_endpoint, status=status, db_ro=db.SessionManagerDepRO, db_rw=db.SessionManagerDepRW)
+	Telemetry  .register(app=app, prefix=prefix, gen_endpoint=gen_endpoint, status=status, db_ro=db.SessionManagerDepRO, db_rw=db.SessionManagerDepRW)
+	TextMessage.register(app=app, prefix=prefix, gen_endpoint=gen_endpoint, status=status, db_ro=db.SessionManagerDepRO, db_rw=db.SessionManagerDepRW)
 
