@@ -9,9 +9,9 @@ from fastapi             import FastAPI, status, Request, Response, Path
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses   import HTMLResponse
 
-from . import models
 from . import db
-
+from . import htmx
+from . import models
 
 
 
@@ -111,7 +111,7 @@ async def api_models_get() -> dict[str, list[str]]:
 
 
 models.register(app, prefix="/api/messages", status=status, db=db)
-
+htmx  .register(app, prefix="/mx"          , status=status)
 
 
 

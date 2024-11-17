@@ -5,18 +5,73 @@ from typing import Annotated, Optional, Generator, Literal
 from fastapi import Depends, Query
 from pydantic import BaseModel
 from sqlmodel import select
+from pydantic.functional_validators import AfterValidator
 
 from .. import dbgenerics
 
 
 
 
+delta_short_to_long = {
+	"m": (lambda x: x     , "minutes"),
+	"h": (lambda x: x     , "hours"  ),
+	"D": (lambda x: x     , "days"   ),
+	"W": (lambda x: x     , "weeks"  ),
+	"M": (lambda x: x *  4, "weeks"  ),
+	"Y": (lambda x: x * 52, "weeks"  )
+}
 
 def get_now() -> int:
 	return int(datetime.timestamp(datetime.now()))
 
 def get_since() -> int:
 	return int(datetime.timestamp(datetime.now() - timedelta(days=1)))
+
+def get_timestamp(value:int, unit:str, begin=None, after=False, verbose=False):
+	if verbose: print(f"{value=} {unit=} {begin=} {after=}")
+
+	if begin is None:
+		begin = get_now()
+
+	delta_func, delta_key  = delta_short_to_long[unit]
+	delta_val  = delta_func(value)
+	delta_conf = { delta_key: delta_val }
+	delta      = timedelta(**delta_conf)
+	begin_ts   = datetime.fromtimestamp(begin)
+
+	if verbose: print(f"{value=} {unit=} {begin=} {after=} {delta_key=} {delta_val=} {delta_conf=} {delta=} {begin_ts=}")
+
+	if after:
+		ts = int( datetime.timestamp(begin_ts + delta) )
+	else:
+		ts = int( datetime.timestamp(begin_ts - delta) )
+
+	if verbose: print(f"{value=} {unit=} {begin=} {after=} {delta_key=} {delta_val=} {delta_conf=} {delta=} {begin_ts=} {ts=} {datetime.fromtimestamp(ts)}")
+
+	return ts
+
+
+
+
+
+def validate_time(vals: str) -> str:
+	if vals is None: return None
+
+	assert isinstance(vals, str)
+
+	assert len(vals) >= 2
+
+	unit = vals[-1]
+
+	assert unit in delta_short_to_long, f"invalide unit: {unit} not int {', '.join(delta_short_to_long.keys())}"
+
+	val  = int(vals[:-1])
+
+	assert val > 0
+
+	return vals
+
+
 
 # https://fastapi.tiangolo.com/tutorial/dependencies/classes-as-dependencies/#classes-as-dependencies_1
 class SharedFilterQueryParams(BaseModel):
@@ -47,8 +102,10 @@ SharedFilterQuery = Annotated[SharedFilterQueryParams, Depends(SharedFilterQuery
 
 
 class TimedFilterQueryParams(SharedFilterQueryParams):
-	since   : Annotated[Optional[int]  , Query(default=Depends(get_since), ge=0)       ]
-	until   : Annotated[Optional[int]  , Query(default=None              , ge=0)       ]
+	since      : Annotated[Optional[int]  , Query(default=Depends(get_since), ge=0)       ]
+	until      : Annotated[Optional[int]  , Query(default=None              , ge=0)       ]
+	time_from  : Annotated[Optional[str]  , Query(default=None                    ), AfterValidator(validate_time) ]
+	time_length: Annotated[Optional[str]  , Query(default=None                    ), AfterValidator(validate_time) ]
 
 	def __call__(self, session: dbgenerics.GenericSession, cls):
 		qry = SharedFilterQueryParams.__call__(self, session, cls)
@@ -61,14 +118,42 @@ class TimedFilterQueryParams(SharedFilterQueryParams):
 			print(" UNTIL", self.until)
 			qry = qry.where(cls.gateway_receive_time <= self.until)
 
+		if self.time_from is not None:
+			print(" TIME_FROM", self.time_from)
+			time_from      = self.time_from
+			assert len(time_from) >= 2
+
+			time_from_unit = time_from[-1]
+			time_from_val  = int(time_from[:-1])
+
+			assert time_from_unit in delta_short_to_long, f"invalide unit: {delta_short_to_long.keys()}"
+
+			time_from_ts   = get_timestamp(value=time_from_val, unit=time_from_unit, begin=None, after=False)
+
+			qry            = qry.where(cls.gateway_receive_time >= time_from_ts)
+
+			if self.time_length is not None:
+				print(" TIME_LENGTH", self.time_length)
+				time_length      = self.time_length
+				assert len(time_length) >= 2
+
+				time_length_unit = time_length[-1]
+				time_length_val  = time_length[:-1]
+				assert time_length_unit in delta_short_to_long, f"invalide unit: {delta_short_to_long.keys()}"
+
+				time_length_ts   = get_timestamp(value=time_length_val, unit=time_length_unit, begin=time_from_ts, after=True)
+				qry              = qry.where(cls.gateway_receive_time <= time_length_ts)
+
 		return qry
 
 	@classmethod
 	def endpoints(cls):
 		return {
 			**{
-				"since": ("since", int  , False),
-				"until": ("until", int  , False),
+				"since"      : ("since"      , int  , False),
+				"until"      : ("until"      , int  , False),
+				"time_from"  : ("time_from"  , str  , False),
+				"time_length": ("time_length", str  , False),
 			},
 			**SharedFilterQueryParams.endpoints()
 		}
