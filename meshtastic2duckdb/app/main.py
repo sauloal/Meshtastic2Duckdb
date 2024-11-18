@@ -5,9 +5,9 @@ import typing as t
 
 from contextlib import asynccontextmanager
 
-from fastapi             import FastAPI, status, Request, Response, Path
+from fastapi             import FastAPI, APIRouter, status, Request, Response, Path
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses   import HTMLResponse
+from fastapi.responses   import HTMLResponse, RedirectResponse
 
 from . import db
 from . import htmx
@@ -86,32 +86,47 @@ def get_engine():
 db.get_engine = get_engine
 
 
+root_router = APIRouter(tags=["Root"], include_in_schema=False)
+api_router  = APIRouter(tags=["API" ], include_in_schema=True)
 
-@app.get("/",       response_class=HTMLResponse, status_code=status.HTTP_204_NO_CONTENT, include_in_schema=False)
-async def root():
-	return ""
 
-@app.get("/livez",  response_class=HTMLResponse, status_code=status.HTTP_204_NO_CONTENT, include_in_schema=False)
+# https://github.com/encode/starlette/blob/master/starlette/status.py
+@root_router.get("/",       response_class=HTMLResponse, status_code=status.HTTP_308_PERMANENT_REDIRECT, include_in_schema=False)
+async def root(request: Request):
+	return RedirectResponse(request.url_for("mx:root"))
+
+@root_router.get("/livez",  response_class=HTMLResponse, status_code=status.HTTP_204_NO_CONTENT, include_in_schema=False)
 async def livez() -> None:
 	return None
 
-@app.get("/readyz", response_class=HTMLResponse, status_code=status.HTTP_204_NO_CONTENT, include_in_schema=False)
+@root_router.get("/readyz", response_class=HTMLResponse, status_code=status.HTTP_204_NO_CONTENT, include_in_schema=False)
 async def readyz() -> None:
 	return None
 
-@app.get("/api")
+
+
+
+@api_router.get("/")
 async def api_get() -> dict[str, list[str]]:
 	return { "endpoints": ["messages"] }
 
-@app.get("/api/messages")
+@api_router.get("/messages")
 async def api_models_get() -> dict[str, list[str]]:
 	# TODO: Get from database
 	return { "endpoints": ["nodeinfo", "nodes", "position", "rangetest", "telemetry", "textmessage"] }
 
 
 
-models.register(app, prefix="/api/messages", status=status, db=db)
-htmx  .register(app, prefix="/mx"          , status=status)
+models.register(api_router, prefix="/messages", status=status, db=db)
+
+
+app.include_router(htmx.router, prefix='/mx')
+app.include_router(api_router , prefix='/api')
+
+
+print("ROUTE")
+for route in app.routes:
+	print(f"  name {str(route.name):40s} path {str(route.path)}")
 
 
 
