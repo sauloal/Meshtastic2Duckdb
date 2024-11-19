@@ -120,6 +120,7 @@ async def api_models_get() -> dict[str, list[str]]:
 models.register(api_router, prefix="/messages", status=status, db=db)
 
 
+app.include_router(root_router, prefix='')
 app.include_router(htmx.router, prefix='/mx')
 app.include_router(api_router , prefix='/api')
 
