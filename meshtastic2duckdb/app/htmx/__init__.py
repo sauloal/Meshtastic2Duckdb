@@ -55,7 +55,7 @@ async def mx_root(request: Request, year: QueryYear, count: QueryCount = 10):
     )
 
 @router.get("/start", response_class=HTMLResponse)
-async def mx_start(request: Request, year: QueryYear, count: QueryCount = 10):
+async def mx_start(request: Request):
     urls          = get_urls()
     title         = "Home"
     root          = urls[title]
@@ -69,22 +69,28 @@ async def mx_start(request: Request, year: QueryYear, count: QueryCount = 10):
 
 
 
+
+
 from bokeh.models import ColumnDataSource
 from bokeh.plotting import figure
 from bokeh.embed import components
 
+QueryImageDimension  = Annotated[int   | None, Query(ge=100, le=10_000)]
+QueryBarWidth        = Annotated[float | None, Query(ge=0.1, le=1.0   )]
+
 
 @router.get("/charts/temp", response_class=HTMLResponse)
-async def mx_charts_temp(request: Request, year: QueryYear, count: QueryCount = 10):
+async def mx_charts_temp(request: Request, year: QueryYear, count: QueryCount = 10, image_width: QueryImageDimension = 500, image_height: QueryImageDimension = 500, bar_width: QueryBarWidth=0.8):
     urls          = get_urls()
     title         = "Temp"
     root          = urls[title]
 
-    country_names = list( str(v) for v in range(1, count+1) )
-    country_gdps  = list(                 range(1, count+1))
-    cds           = ColumnDataSource(data=dict(country_names=country_names, country_gdps=country_gdps))
-    fig           = figure(x_range=country_names, height=500, title=f"Top {count} GDPs ({year})")
-    fig.vbar(x='country_names', top='country_gdps', width=0.8, source=cds)
+    column_labels = list( str(v) for v in range(1, count+1) )
+    column_values = list(                 range(1, count+1))
+
+    cds           = ColumnDataSource(data=dict(column_labels=column_labels, column_values=column_values))
+    fig           = figure(x_range=column_labels, height=image_height, width=image_width, title=f"Top {count} Values for year ({year})")
+    fig.vbar(x='column_labels', top='column_values', width=bar_width, source=cds)
     script, div   = components(fig)
 
     years         = list( range(year_get_min(), year_get_max()+1) )
