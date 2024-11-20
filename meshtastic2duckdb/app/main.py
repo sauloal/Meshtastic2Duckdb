@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 
 from fastapi             import FastAPI, APIRouter, status, Request, Response, Path
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses   import HTMLResponse, RedirectResponse
+from fastapi.responses   import HTMLResponse, RedirectResponse, FileResponse
 
 from . import db
 from . import htmx
@@ -52,6 +52,7 @@ class EndpointFilter(logging.Filter):
 uvicorn_logger = logging.getLogger("uvicorn.access")
 uvicorn_logger.addFilter(EndpointFilter(path="/livez"))
 uvicorn_logger.addFilter(EndpointFilter(path="/readyz"))
+uvicorn_logger.addFilter(EndpointFilter(path="/favicon.ico"))
 
 
 
@@ -93,7 +94,7 @@ api_router  = APIRouter(tags=["API" ], include_in_schema=True)
 # https://github.com/encode/starlette/blob/master/starlette/status.py
 @root_router.get("/",       response_class=HTMLResponse, status_code=status.HTTP_308_PERMANENT_REDIRECT, include_in_schema=False)
 async def root(request: Request):
-	return RedirectResponse(request.url_for("mx:root"))
+	return RedirectResponse(request.url_for("mx_root"))
 
 @root_router.get("/livez",  response_class=HTMLResponse, status_code=status.HTTP_204_NO_CONTENT, include_in_schema=False)
 async def livez() -> None:
@@ -102,6 +103,10 @@ async def livez() -> None:
 @root_router.get("/readyz", response_class=HTMLResponse, status_code=status.HTTP_204_NO_CONTENT, include_in_schema=False)
 async def readyz() -> None:
 	return None
+
+@root_router.get("/favicon.ico", status_code=status.HTTP_204_NO_CONTENT, include_in_schema=False)
+async def favicon() -> None:
+	return Response(content=None, media_type="image/x-icon")
 
 
 

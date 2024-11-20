@@ -1,40 +1,64 @@
-{% extends 'base.html' %} 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meshtastic Viz</title>
 
-{% block content %}
-    <p class="lead">GDP by country</p>
+    {#
+    https://releases.jquery.com/
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"                          integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
 
-    <div class="row">
-        <div id="barchart" class="col-10">
-            {% include 'partials/gdp-bar.html' %}
-        </div>
-        <div class="col-2">
-                <label>Year</label>
-                <select id="select-year" 
-                        class="custom-select" 
-                        name="year"
-                        autocomplete="off"
-                        hx-get="{% url 'index' %}" 
-                        hx-target="#barchart"
-                        hx-vals="js:{count: document.getElementById('count').value}">
+    https://cdnjs.com/libraries/popper.js/1.16.1
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
 
-                    {% for year in years %}
-                        <option value="{{year}}" 
-                        {% if year_selected == year %} selected {% endif %}>{{year}}</option>
-                    {% endfor %}
-                </select>
-    
-                <hr/>
-                <label>Count</label>
-                <input type="number"
-                        id="count"
-                        name="count" 
-                        autocomplete="off"
-                        value="{{count}}"
-                        hx-get="{% url 'index' %}" 
-                        hx-target="#barchart"
-                        hx-vals="js:{year: document.getElementById('select-year').value}" />
-            </form>
-        </div>
+    https://www.bootstrapcdn.com/
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"       integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+
+
+    https://popper.js.org/docs/v2/
+    curl -v "https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.1/umd/popper.min.js" | openssl dgst -sha384 -binary | openssl base64
+
+
+    https://docs.bokeh.org/en/2.4.1/docs/first_steps/installation.html#install-bokehjs
+    https://github.com/bokeh/bokeh/tags
+    ls .venv/lib/python3.10/site-packages/bokeh*
+
+    curl "https://cdn.bokeh.org/bokeh/release/bokeh-3.6.1.min.js"         | openssl dgst -sha384 -binary | openssl base64
+    curl "https://cdn.bokeh.org/bokeh/release/bokeh-widgets-3.6.1.min.js" | openssl dgst -sha384 -binary | openssl base64
+    curl "https://cdn.bokeh.org/bokeh/release/bokeh-tables-3.6.1.min.js"  | openssl dgst -sha384 -binary | openssl base64
+    curl "https://cdn.bokeh.org/bokeh/release/bokeh-gl-3.6.1.min.js"      | openssl dgst -sha384 -binary | openssl base64
+    curl "https://cdn.bokeh.org/bokeh/release/bokeh-mathjax-3.6.1.min.js" | openssl dgst -sha384 -binary | openssl base64
+
+
+    https://htmx.org/docs/
+    curl "https://unpkg.com/htmx.org@2.0.3"                               | openssl dgst -sha384 -binary | openssl base64
+    #}
+
+    <script src="https://code.jquery.com/jquery-3.7.1.slim.min.js"                          integrity="sha384-5AkRS45j4ukf+JbWAfHL8P4onPA9p0KwwP7pUdjSQA3ss9edbJUJc/XcYAiheSSz" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.1/umd/popper.min.js" integrity="sha384-9/reFTGAW83EW2RDu2S0VKaIzap3H66lZH81PoYlFhbGU+6BZp6G7niu735Sk7lN" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+
+    <link   href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css"  integrity="sha384-xOolHFLEh07PJGoPkLv1IbcEPTNtaed2xpHsD9ESMhqIYd0nLMwNLD69Npy4HI+N" crossorigin="anonymous" referrerpolicy="no-referrer" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.min.js"     integrity="sha384-+sLIOodYLS7CIrQpBjl+C7nPvqq+FbNUBDunl/OZv93DB7Ln/533i8e/mZXLi/P+" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-3.6.1.min.js"                    integrity="sha384-21CsHPy7ZTbTfTOb+s7I/N3lxPVqxKOkGYcOdcLFyW6yzElTWXaLrBp1piLYTFdj" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-3.6.1.min.js"            integrity="sha384-v3ZOrQMR5x9xqyXTX1BXQHODhIqSUIR41sjM2DDjIuq0LnmlqSP1oyI9M1UiFPBw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-tables-3.6.1.min.js"             integrity="sha384-JVM36Ujaol5G5WtNPubshaByeA20fQb5PdTUBhr0LXbiHmcolFLSBdx7A6rrP8zd" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-gl-3.6.1.min.js"                 integrity="sha384-0pLQze3KGUMUeHnHps7gh0+PG22T2Quj2kao3W/Bnl27E0zt1S8vU0h84K/QqznP" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-mathjax-3.6.1.min.js"            integrity="sha384-wKgqTLsRN+/A4umk7L8ItcVTDLJlfp3SZzgyG/5vHRWaieV0M1zb3ZwX+hB45QhL" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <!-- https://htmx.org/docs/ -->
+    <script src="https://unpkg.com/htmx.org@2.0.3"                                          integrity="sha384-0895/pl2MU10Hqc6jd4RvrthNlDiE9U1tWmX7WRESftEDRosgxNsQG/Ze9YMRzHq" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+
+<body>
+    {% include 'partials/navbar.html' %}
+
+    <div class="container mt-4" id="container">
+        {% include 'partials/start.html' %}
     </div>
-
-{% endblock %}
+</body>
+</html>
