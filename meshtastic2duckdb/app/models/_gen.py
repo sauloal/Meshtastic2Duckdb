@@ -32,12 +32,16 @@ async def api_model_post( data: MessageClass, session_manager: GenericSessionMan
 	return None
 
 
+def init_model(*, model: Message, session_manager_t):
+	data_class   = model.__dataclass__()
+	query_filter = model.__filter__()
+	return data_class, query_filter
 
 def gen_endpoint(*, app: FastAPI, verb: str, endpoint: str, name: str, summary: str, description: str, model: Message, session_manager_t, tags: list[str], filter_key:str=None, filter_is_list: bool=False, response_model=None, fixed_response=None, status_code=None):
 	assert verb in ("GET","POST")
 	alias        = None
-	data_class   = model.__dataclass__()
-	query_filter = model.__filter__()
+	data_class, query_filter = init_model(model=model, session_manager_t=session_manager_t)
+
 
 	operation_id = f"{endpoint}_{verb}".lower().replace("/","_").replace("{","_").replace("}","_").replace(":","_").replace("-","_").replace("__","_").strip("_")
 	#print(f"  operation_id {operation_id}")

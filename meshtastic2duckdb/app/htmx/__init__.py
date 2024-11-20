@@ -5,7 +5,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.responses  import HTMLResponse
 
 from pydantic.functional_validators import AfterValidator
-from typing_extensions import Annotated
+from typing_extensions              import Annotated
 
 # https://fastapi.tiangolo.com/advanced/templates/#using-jinja2templates
 #
@@ -15,57 +15,64 @@ from typing_extensions import Annotated
 # https://github.com/ocramz/htmx-plotly
 # https://htmx.org/examples/lazy-load/
 
-router = APIRouter(tags=["HTMX"], include_in_schema=False)
+
+
+
+
+router    = APIRouter(tags=["HTMX"], include_in_schema=False)
 
 templates = Jinja2Templates(directory="templates")
 
 def year_get_min():
-    return 2023
+	return 2023
 
 def year_get_max():
-    return 2024
+	return 2024
 
 def validate_year(year: int) -> int:
-    assert year >= year_get_min()
-    assert year <= year_get_max()
-    return year
+	assert year >= year_get_min()
+	assert year <= year_get_max()
+	return year
 
 def get_urls():
-    return {
-        "Home": "mx_start",
-        "Temp": "mx_charts_temp"
-    }
+	return {
+		"Home"     : "mx_start",
+		"Node Info": "mx_charts_nodeinfo"
+	}
+
+
 
 QueryYear  = Annotated[int | None, AfterValidator(validate_year),  Query(default_factory=year_get_max)]
 QueryCount = Annotated[int | None, Query(ge=5, le=1_000)]
 
 
+
 @router.get("/", response_class=HTMLResponse)
 async def mx_root(request: Request, year: QueryYear, count: QueryCount = 10):
-    urls          = get_urls()
-    title         = "Home"
-    root          = urls[title]
+	urls          = get_urls()
+	title         = "Home"
+	root          = urls[title]
 
-    return templates.TemplateResponse(
-        request=request, name="index.html", context={
-            "title"        : title,
-            "root"         : root,
-            "urls"         : urls,
-	}
-    )
+	return templates.TemplateResponse(
+		request=request, name="index.html", context={
+			"title"        : title,
+			"root"         : root,
+			"urls"         : urls,
+		}
+	)
 
 @router.get("/start", response_class=HTMLResponse)
 async def mx_start(request: Request):
-    urls          = get_urls()
-    title         = "Home"
-    root          = urls[title]
+	urls          = get_urls()
+	title         = "Home"
+	root          = urls[title]
 
-    return templates.TemplateResponse(
-        request=request, name="partials/start.html", context={
-            "title"        : title,
-            "root"         : root,
-	}
-    )
+	return templates.TemplateResponse(
+		request=request, name="partials/start.html", context={
+			"title"        : title,
+			"root"         : root,
+		}
+	)
 
 
 
@@ -75,37 +82,111 @@ from bokeh.models import ColumnDataSource
 from bokeh.plotting import figure
 from bokeh.embed import components
 
+
+
+def gen_image(labels: list[str], values: list[int | float], title: str, x_label: str, y_label: str, image_height: int=500, image_width: int=500, bar_width: float=0.8, graph_type: str="vbar") -> tuple[str,str]:
+	cds         = ColumnDataSource( data={x_label: labels, y_label: values} )
+	fig         = figure(x_range=labels, height=image_height, width=image_width, title=title)
+
+	"""
+	fig.vbar() - vertical bar chart (used in our example)
+	fig.hbar() - horizontal bar chart
+	fig.line() - line chart
+	fig.scatter() - scatter plot
+	"""
+
+	if   graph_type == "vbar":
+		fig.vbar(   x=x_label, top=y_label, width=bar_width, source=cds)
+	elif graph_type == "hbar":
+		fig.hbar(   x=x_label, top=y_label, width=bar_width, source=cds)
+	elif graph_type == "line":
+		fig.line(   x=x_label, top=y_label, width=bar_width, source=cds)
+	elif graph_type == "scatter":
+		fig.scatter(x=x_label, top=y_label, width=bar_width, source=cds)
+	else:
+		raise ValueError(f"unknown graph type: {graph_type}")
+
+	script, div = components(fig)
+	return script, div
+
+
+
 QueryImageDimension  = Annotated[int   | None, Query(ge=100, le=10_000)]
 QueryBarWidth        = Annotated[float | None, Query(ge=0.1, le=1.0   )]
 
 
-@router.get("/charts/temp", response_class=HTMLResponse)
-async def mx_charts_temp(request: Request, year: QueryYear, count: QueryCount = 10, image_width: QueryImageDimension = 500, image_height: QueryImageDimension = 500, bar_width: QueryBarWidth=0.8):
-    urls          = get_urls()
-    title         = "Temp"
-    root          = urls[title]
 
-    column_labels = list( str(v) for v in range(1, count+1) )
-    column_values = list(                 range(1, count+1))
+from .. import db
+from .. import models
 
-    cds           = ColumnDataSource(data=dict(column_labels=column_labels, column_values=column_values))
-    fig           = figure(x_range=column_labels, height=image_height, width=image_width, title=f"Top {count} Values for year ({year})")
-    fig.vbar(x='column_labels', top='column_values', width=bar_width, source=cds)
-    script, div   = components(fig)
+@router.get("/charts/nodeinfo", response_class=HTMLResponse)
+async def mx_charts_nodeinfo(request: Request, response: Response, year: QueryYear, session_manager: db.SessionManagerDepRO, query_filter: models.NodeInfo.__filter__(),
+	count: QueryCount = 10, image_width: QueryImageDimension = 500, image_height: QueryImageDimension = 500, bar_width: QueryBarWidth=0.8):
 
-    years         = list( range(year_get_min(), year_get_max()+1) )
+	"""
+	print(f"mx_charts_temp {year=} {count=} {image_width=} {image_height=} {bar_width=} {session_manager=}")
+	# models.register(api_router, prefix="/messages", status=status, db=db)
+	# def gen_endpoint(*, app: FastAPI, verb: str, endpoint: str, name: str, summary: str, description: str, model: Message, session_manager_t, tags: list[str], filter_key:str=None, filter_is_list: bool=False, response_model=None, fixed_response=None, status_code=None):
+	# async def endpoint(                             session_manager: session_manager_t, request: Request, response: Response, query_filter: query_filter, path_param: str = Path(alias=alias)) -> response_model:
+	# NodeInfo   .register(app=app, prefix=prefix, gen_endpoint=gen_endpoint, status=status, db_ro=db.SessionManagerDepRO, db_rw=db.SessionManagerDepRW)
+	# def register(cls, app: FastAPI, prefix: str, gen_endpoint, status, db_ro, db_rw):
+	# resp = model.Query(session_manager=session_manager, query_filter=query_filter)
 
-    return templates.TemplateResponse(
-        request=request, name="partials/graphs.html", context={
-            "title"        : title,
-            "root"         : root,
+	# , query_filter: query_filter
+	#data_class, query_filter = models._gen.init_model(model=model, session_manager_t=session_manager_t)
 
-            "years"        : years,
-            "year_selected": year,
-            "count"        : count,
+	@classmethod
+	def Query( cls, *, session_manager: dbgenerics.GenericSessionManager, query_filter: SharedFilterQuery ) -> "list[ModelBase]":
+		#print("ModelBase: class query", "model", cls, "session_manager", session_manager, "query_filter", query_filter)
+		# https://fastapi.tiangolo.com/tutorial/sql-databases/#read-heroes
 
-            "script"       : script,
-            "div"          : div,
-	}
-    )
+		with session_manager as session:
+			qry     = query_filter(session, cls)
+			results = session.exec(qry)
+			results = [r.to_dataclass() for r in results]
+		return results
+	"""
+
+	urls			= get_urls()
+	title			= "Node Info"
+	root			= urls[title]
+	years			= list( range(year_get_min(), year_get_max()+1) )
+
+	labels			= list( str(v) for v in range(1, count+1) )
+	values			= list(                 range(1, count+1))
+
+	#cls                     = models.NodeInfo
+	#data_class, query_filter_cls = models._gen.init_model(model=cls, session_manager_t=session_manager)
+	print(query_filter)
+
+	#query_filter            = query_filter_cls()
+	#print(f"  mx_charts_nodeinfo {cls=} {data_class=} {query_filter=}")
+	resp                    = cls.Query(session_manager=session_manager, query_filter=query_filter)
+	#print( resp )
+
+	script, div		= gen_image(
+		labels		= labels,
+		values		= values,
+		title		= f"Temperature through time ({count} samples) : Year {year}",
+		x_label		= "Date",
+		y_label		= "Temperature",
+		image_height	= image_height,
+		image_width	= image_width,
+		bar_width	= bar_width,
+		graph_type 	= "vbar"
+	)
+
+	return templates.TemplateResponse(
+		request=request, name="partials/graphs.html", context={
+			"title"        : title,
+			"root"         : root,
+
+			"years"        : years,
+			"year_selected": year,
+			"count"        : count,
+
+			"script"       : script,
+			"div"          : div,
+		}
+	)
 

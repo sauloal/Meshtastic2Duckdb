@@ -1,6 +1,6 @@
 from ._base    import *
 from ._message import *
-
+from fastapi   import params as fastapi_params
 
 class NodeInfoClass(MessageClass):
 	__tablename__       = "nodeinfo"
@@ -84,6 +84,11 @@ class NodeInfoFilterQueryParams(TimedFilterQueryParams):
 
 	def __call__(self, session: dbgenerics.GenericSession, cls):
 		qry = TimedFilterQueryParams.__call__(self, session, cls)
+
+		for k in self.model_fields.keys():
+			v = getattr(self, k)
+			if isinstance(v, fastapi_params.Depends):
+				setattr(self, k, v.dependency())
 
 		if self.userIds is not None:
 			print(" USER IDS    ", self.userIds)

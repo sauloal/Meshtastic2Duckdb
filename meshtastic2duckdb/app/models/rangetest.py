@@ -1,5 +1,6 @@
 from ._base    import *
 from ._message import *
+from fastapi   import params as fastapi_params
 
 class RangeTestClass(MessageClass):
 	__tablename__       = "rangetest"

@@ -72,9 +72,11 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # https://github.com/encode/starlette/blob/master/starlette/status.py
 
 
+
+"""
 print("CONNECTING ENGINE")
 db_engine   = db.dbEngineLocalFromEnv(verbose=False)
-print(db_engine, type(db_engine))
+#print(db_engine, type(db_engine))
 print("ENGINE CONNECTED")
 
 
@@ -85,6 +87,9 @@ def get_engine():
 	return db_engine
 
 db.get_engine = get_engine
+"""
+
+_ = db.get_engine()
 
 
 root_router = APIRouter(tags=["Root"], include_in_schema=False)

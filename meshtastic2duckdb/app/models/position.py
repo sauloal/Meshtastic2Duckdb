@@ -1,6 +1,6 @@
 from ._base    import *
 from ._message import *
-
+from fastapi   import params as fastapi_params
 
 class PositionClass(MessageClass):
 	__tablename__       = "position"
@@ -128,40 +128,15 @@ class PositionFilterQueryParams(TimedFilterQueryParams):
 
 	def __call__(self, session: dbgenerics.GenericSession, cls):
 		qry = TimedFilterQueryParams.__call__(self, session, cls)
+
+		for k in self.model_fields.keys():
+			v = getattr(self, k)
+			if isinstance(v, fastapi_params.Depends):
+				setattr(self, k, v.dependency())
+
 		qry = self._filter(qry, cls)
-		return qry
-
-	"""
-	def __call__(self, session: dbgenerics.GenericSession, cls):
-		qry = TimedFilterQueryParams.__call__(self, session, cls)
-
-		for filterName, colName in [
-				["LatitudeI"  , "latitudeI"  ],
-				["LongitudeI" , "longitudeI" ],
-				["Latitude"   , "latitude"   ],
-				["Longitude"  , "longitude"  ],
-				["Altitude"   , "altitude"   ],
-				["PDOP"       , "PDOP"       ],
-				["GroundSpeed", "groundSpeed"],
-			]:
-			for func in ("min", "max"):
-				selfAttr = getattr(self, func + filterName)
-				if selfAttr is not None:
-					clsAttr = getattr(cls, colName)
-					print(" ", func, filterName, colName, selfAttr, clsAttr)
-					if func == "min":
-						qry = qry.where(clsAttr is not None)
-						qry = qry.where(clsAttr >= selfAttr)
-					else:
-						qry = qry.where(clsAttr is not None)
-						qry = qry.where(clsAttr <= selfAttr)
-
-		if self.hasLocation is not None:
-			print(" HAS LOCATION", self.hasLocation)
-			qry = qry.where(cls.latitude is not None)
 
 		return qry
-	"""
 
 PositionFilterQuery = Annotated[PositionFilterQueryParams, Depends(PositionFilterQueryParams)]
 

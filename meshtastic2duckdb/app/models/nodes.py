@@ -1,6 +1,6 @@
 from ._base    import *
 from ._message import *
-
+from fastapi   import params as fastapi_params
 
 class NodesClass(ModelBaseClass):
 	__tablename__       = "nodes"
@@ -184,7 +184,14 @@ class NodesPositionFilterQueryParams(TimedFilterQueryParams):
 
 	def __call__(self, session: dbgenerics.GenericSession, cls):
 		qry = TimedFilterQueryParams.__call__(self, session, cls)
+
+		for k in self.model_fields.keys():
+			v = getattr(self, k)
+			if isinstance(v, fastapi_params.Depends):
+				setattr(self, k, v.dependency())
+
 		qry = self._filter(qry, cls)
+
 		return qry
 
 
@@ -217,6 +224,12 @@ class NodesFilterQueryParams(NodesPositionFilterQueryParams):
 
 	def __call__(self, session: dbgenerics.GenericSession, cls):
 		qry = TimedFilterQueryParams.__call__(self, session, cls)
+
+		for k in self.model_fields.keys():
+			v = getattr(self, k)
+			if isinstance(v, fastapi_params.Depends):
+				setattr(self, k, v.dependency())
+
 
 		if self.isFavorite is not None:
 			print(" IS FAVORITE", self.isFavorite)

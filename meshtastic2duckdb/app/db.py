@@ -244,16 +244,18 @@ class DbManager:
 
 
 
-
+db_engine = None
 
 @lru_cache(maxsize=None)
 def get_engine():
-	print("DB GET_ENGINE")
-	#db_engine   = DbEngineLocal(db_filename=db_name)
-	db_engine   = dbEngineLocalFromEnv(verbose=False)
+	global db_engine
+	if db_engine is None:
+		print("DB GET_ENGINE")
+		#db_engine   = DbEngineLocal(db_filename=db_name)
+		db_engine   = dbEngineLocalFromEnv(verbose=False)
+
 	print("DB GET_ENGINE", db_engine)
 	return db_engine
-
 
 
 

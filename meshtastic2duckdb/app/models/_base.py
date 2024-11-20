@@ -92,7 +92,7 @@ class ModelBase:
 
 	@classmethod
 	def Query( cls, *, session_manager: dbgenerics.GenericSessionManager, query_filter: SharedFilterQuery ) -> "list[ModelBase]":
-		#print("ModelBase: class query", "model", cls, "session_manager", session_manager, "query_filter", query_filter)
+		print("ModelBase: class query", "model", cls, "session_manager", session_manager, "query_filter", query_filter)
 		# https://fastapi.tiangolo.com/tutorial/sql-databases/#read-heroes
 
 		with session_manager as session:

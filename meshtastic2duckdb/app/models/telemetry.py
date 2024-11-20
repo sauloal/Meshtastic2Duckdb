@@ -1,5 +1,6 @@
 from ._base    import *
 from ._message import *
+from fastapi   import params as fastapi_params
 
 
 class TelemetryClass(MessageClass):
@@ -80,6 +81,11 @@ class TelemetryFilterQueryParams(TimedFilterQueryParams):
 
 	def __call__(self, session: dbgenerics.GenericSession, cls):
 		qry = TimedFilterQueryParams.__call__(self, session, cls)
+
+		for k in self.model_fields.keys():
+			v = getattr(self, k)
+			if isinstance(v, fastapi_params.Depends):
+				setattr(self, k, v.dependency())
 
 		if self.minBatteryLevel is not None:
 			self.minBatteryLevel = int(self.minBatteryLevel)

@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 from typing import Annotated, Optional, Generator, Literal
 
-from fastapi import Depends, Query
+from fastapi  import Depends, Query, params as fastapi_params
 from pydantic import BaseModel
 from sqlmodel import select
 from pydantic.functional_validators import AfterValidator
@@ -87,6 +87,11 @@ class SharedFilterQueryParams(BaseModel):
 
 	# https://sqlmodel.tiangolo.com/tutorial/where/?h=select#where-and-expressions
 	def __call__(self, session: dbgenerics.GenericSession, cls):
+		for k in self.model_fields.keys():
+			v = getattr(self, k)
+			if isinstance(v, fastapi_params.Depends):
+				setattr(self, k, v.dependency())
+
 		sel = select(cls)
 		qry = sel.offset(self.offset).limit(self.limit)
 		return qry
@@ -110,8 +115,13 @@ class TimedFilterQueryParams(SharedFilterQueryParams):
 	def __call__(self, session: dbgenerics.GenericSession, cls):
 		qry = SharedFilterQueryParams.__call__(self, session, cls)
 
+		for k in self.model_fields.keys():
+			v = getattr(self, k)
+			if isinstance(v, fastapi_params.Depends):
+				setattr(self, k, v.dependency())
+
 		if self.since is not None:
-			print(" SINCE", self.since)
+			print(" SINCE", self.since, type(self.since))
 			qry = qry.where(cls.gateway_receive_time >= self.since)
 
 		if self.until is not None:
