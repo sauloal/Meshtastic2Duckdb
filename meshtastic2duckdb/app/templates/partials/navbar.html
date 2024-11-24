@@ -1,19 +1,26 @@
-  <nav class="navbar navbar-expand-sm navbar-dark bg-dark">
-    <a class="navbar-brand" href="{{ url_for(root) }}">Meshtastic Analysis</a>
+<nav class="navbar navbar-expand-sm navbar-dark bg-dark">
+	<a class="navbar-brand" href="{{ url_for(root) }}">Meshtastic Analysis</a>
+{#
+	https://getbootstrap.com/docs/4.0/components/navbar/
+#}
+	<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+		<span class="navbar-toggler-icon"></span>
+	</button>
 
-    {# https://getbootstrap.com/docs/4.0/components/navbar/ #}
-    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-      <span class="navbar-toggler-icon"></span>
-    </button>
+	<div class="collapse navbar-collapse" id="navbarNav">
+		<ul class="navbar-nav">
+		{% for url_title, url_name in urls.items()  %}
+			<li class="nav-item {{ "active" if url_name == root else "" }}">
+				<a class="nav-link" hx-boost="true" hx-get="{{ url_for(url_name) }}#{{ url_name }}" hx-target="#container">{{ url_title }}</a>
+			</li>
+		{% endfor %}
+		</ul>
+	</div>
+</nav>
 
-    <div class="collapse navbar-collapse" id="navbarNav">
-      <ul class="navbar-nav">
-        {% for url_title, url_name in urls.items()  %}
-        <li class="nav-item {{ "active" if url_name == root else "" }}">
-          {# <a class="nav-link" href="{{ url_for(url_name) }}">{{ url_title }}{% if url_name == root %} <span class="sr-only"> (current)</span>{% endif %}</a> #}
-          <a class="nav-link" hx-get="{{ url_for(url_name) }}" hx-target="#container">{{ url_title }}{% if url_name == root %} <span class="sr-only"> (current)</span>{% endif %}</a>
-        </li>
-        {% endfor %}
-      </ul>
-    </div>
-  </nav>
+{#
+https://htmx.org/examples/lazy-load/
+<div hx-get="/graph" hx-trigger="load">
+	<img alt="Result loading..." class="htmx-indicator" width="150" src="/img/bars.svg"/>
+</div>
+#}

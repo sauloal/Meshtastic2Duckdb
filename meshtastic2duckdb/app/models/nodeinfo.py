@@ -125,6 +125,39 @@ class NodeInfoFilterQueryParams(TimedFilterQueryParams):
 
 		return qry
 
+	def gen_html_filters(self):
+		#print("gen_html_filters :: SELF", self)
+		return "gen_html_filters"
+		"""
+		<label>Year</label>
+		<select id="select-year"
+			class="custom-select"
+			name="year"
+			autocomplete="off"
+			hx-get="{{ url_for(root) }}"
+			hx-target="#container"
+			hx-vals="js:{count: document.getElementById('count').value}">
+
+			{% for year in years %}
+				<option value="{{year}}"
+				{% if year_selected == year %} selected {% endif %}>{{year}}</option>
+			{% endfor %}
+		</select>
+
+		<hr/>
+
+		<label>Count</label>
+		<input  type="number"
+			id="count"
+			name="count"
+			autocomplete="off"
+			value="{{ count }}"
+			hx-get="{{ url_for(root) }}"
+			hx-target="#container"
+			hx-vals="js:{year: document.getElementById('select-year').value}" />
+		</form>
+		"""
+
 NodeInfoFilterQuery = Annotated[NodeInfoFilterQueryParams, Depends(NodeInfoFilterQueryParams)]
 
 

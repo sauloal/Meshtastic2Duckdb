@@ -1,0 +1,36 @@
+{% block content %}
+    <p class="lead">Meshtastic Logger - {{ title }} ({{ data | length }})</p>
+
+    <div class="row">
+        <div class="col-2">
+                <hr/>
+
+		<table class="table table-sm">
+			<thead>
+				<tr>
+					<th scope="col" name="id">Id</th>
+					{% for k in data[0].keys() | sort %}
+					<th scope="col" name="{{ k }}">{{ k }}</th>
+					{% endfor %}
+				</tr>
+			</thead>
+
+			<tbody>
+				{% for row in data %}
+				<tr>
+					<th scope="row">{{ loop.index }}</th>
+					{% for k,v in row.items() | sort %}
+						<td name="{{ k }}">{{ v }}</td>
+					{% endfor %}
+				</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+
+                <hr/>
+
+		{{ html_filters | safe }}
+            </form>
+        </div>
+    </div>
+{% endblock %}

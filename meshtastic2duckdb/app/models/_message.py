@@ -66,3 +66,13 @@ class Message(ModelBase, SQLModel):
 	portnum   : str          = Field(              sa_type=Text()        , nullable=False )
 	bitfield  : int8  | None = Field(default=None, sa_type=SmallInteger(), nullable=True  )
 
+	__dataclass__ = None
+	__filter__    = None
+
+	@classmethod
+	def get_data_class(cls):
+		return cls.__dataclass__()
+
+	@classmethod
+	def get_filter_class(cls):
+		return cls.__filter__()

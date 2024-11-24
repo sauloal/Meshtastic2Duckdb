@@ -100,6 +100,9 @@ class SharedFilterQueryParams(BaseModel):
 	def endpoints(cls):
 		return {}
 
+	def gen_html_filters(self):
+		raise NotImplementedError()
+
 SharedFilterQuery = Annotated[SharedFilterQueryParams, Depends(SharedFilterQueryParams)]
 
 
