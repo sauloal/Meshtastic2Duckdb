@@ -234,7 +234,7 @@ async def mx_charts_nodeinfo(request: Request, response: Response, year: QueryYe
 			"script"       : script,
 			"div"          : div,
 
-			"data"         : tuple(r.model_dump() for r in resp),
+			"data"         : tuple(r.model_pretty_dump() for r in resp),
 			"html_filters" : html_filters
 		}
 	)

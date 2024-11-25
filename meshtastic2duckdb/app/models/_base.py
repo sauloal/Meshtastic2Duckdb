@@ -17,6 +17,7 @@ from pydantic import BaseModel
 from sqlmodel import Field, Sequence, SQLModel, Column, Session, or_
 
 from ._query import SharedFilterQuery, SharedFilterQueryParams, TimedFilterQuery, TimedFilterQueryParams
+from . import _converters as converters
 from .. import dbgenerics
 
 # https://docs.sqlalchemy.org/en/20/orm/dataclasses.html
@@ -42,10 +43,14 @@ Sequences = []
 class ModelBaseClass(pydantic.BaseModel):
 	gateway_receive_time : int64
 
+	__pretty_names__ = {
+		"gateway_receive_time": (0,"Gateway Receive Time", converters.epoch_to_str)
+	}
+
 	@classmethod
 	def _parse_fields(cls, packet) -> dict[str, typing.Any]:
 		try:
-			return { k: v(packet) for k,v in cls._shared_fields + cls._fields }
+			return { (0,k): v(packet) for k,v in cls._shared_fields + cls._fields }
 		except KeyError as e:
 			print(packet)
 			raise e
@@ -75,6 +80,10 @@ class ModelBaseClass(pydantic.BaseModel):
 	def toDICT(self) -> dict[str, typing.Any]:
 		d = {k:v for k,v in self if k not in ["id", "metadata"]}
 		return d
+
+	def model_pretty_dump(self):
+		#print("model_pretty_dump", self)
+		return { self.__pretty_names__.get(k, (99,k,converters.echo)): v for k,v in self.model_dump().items() }
 
 	def toORM(self) -> "ModelBase":
 		orm_class = self.__class__.__ormclass__()

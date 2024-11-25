@@ -5,11 +5,11 @@
         <div class="col-2">
                 <hr/>
 
-		<table class="table table-sm">
+		<table class="table table-sm table-hover thead-dark text-nowrap table-bordered">
 			<thead>
 				<tr>
 					<th scope="col" name="id">Id</th>
-					{% for k in data[0].keys() | sort %}
+					{% for p,k,f in data[0].keys() | sort %}
 					<th scope="col" name="{{ k }}">{{ k }}</th>
 					{% endfor %}
 				</tr>
@@ -19,8 +19,8 @@
 				{% for row in data %}
 				<tr>
 					<th scope="row">{{ loop.index }}</th>
-					{% for k,v in row.items() | sort %}
-						<td name="{{ k }}">{{ v }}</td>
+					{% for (p,k,f),v in row.items() | sort %}
+						<td name="{{ k }}">{{ f(v) }}</td>
 					{% endfor %}
 				</tr>
 				{% endfor %}

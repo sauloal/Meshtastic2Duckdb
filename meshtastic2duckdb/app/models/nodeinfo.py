@@ -24,6 +24,19 @@ class NodeInfoClass(MessageClass):
 		["publicKey" , lambda packet: packet["decoded"]["user"]["publicKey"]],
 	]
 
+	__pretty_names__ = {
+		**MessageClass.__pretty_names__,
+		**{
+			"user_id"   : (4, "User ID"       , converters.user_id),
+			"longName"  : (4, "Long Name"     , converters.echo),
+			"shortName" : (4, "Short Name"    , converters.echo),
+			"macaddr"   : (4, "MAC Addr"      , converters.echo),
+			"hwModel"   : (4, "Hardware Model", converters.echo),
+			"role"      : (4, "Role"          , converters.echo),
+			"publicKey" : (6, "Public Key"    , converters.echo),
+		}
+	}
+
 
 
 
