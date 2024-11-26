@@ -57,7 +57,7 @@ class ModelBaseClass(pydantic.BaseModel):
 
 	@classmethod
 	def from_packet(cls, packet) -> "ModelBaseClass":
-		fields  = cls._parse_fields(packet)
+		fields  = { k:v for (_,k),v in cls._parse_fields(packet).items() }
 		fields["gateway_receive_time"] = int(datetime.datetime.timestamp(datetime.datetime.now()))
 
 		try:
