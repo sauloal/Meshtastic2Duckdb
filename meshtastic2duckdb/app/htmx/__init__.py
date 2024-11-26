@@ -19,7 +19,7 @@ from typing_extensions              import Annotated
 
 
 
-router    = APIRouter(tags=["HTMX"], include_in_schema=False)
+router    = APIRouter(tags=["HTMX"], include_in_schema=False, default_response_class=HTMLResponse)
 
 templates = Jinja2Templates(directory="templates")
 
@@ -47,7 +47,7 @@ QueryCount = Annotated[int | None, Query(ge=5, le=1_000)]
 
 
 
-@router.get("/", response_class=HTMLResponse)
+@router.get("/")
 async def mx_root(request: Request, year: QueryYear, count: QueryCount = 10):
 	urls          = get_urls()
 	title         = "Home"
@@ -61,7 +61,7 @@ async def mx_root(request: Request, year: QueryYear, count: QueryCount = 10):
 		}
 	)
 
-@router.get("/start", response_class=HTMLResponse)
+@router.get("/start")
 async def mx_start(request: Request):
 	urls          = get_urls()
 	title         = "Home"
@@ -78,9 +78,9 @@ async def mx_start(request: Request):
 
 
 
-from bokeh.models import ColumnDataSource
+from bokeh.models   import ColumnDataSource
 from bokeh.plotting import figure
-from bokeh.embed import components
+from bokeh.embed    import components
 
 
 
@@ -129,7 +129,21 @@ def gen_image(labels: list[str], values: list[int | float], title: str, x_label:
 	)
 	"""
 
-	fig         = figure(x_range=labels, height=image_height, width=image_width, title=title)
+	"""
+	script, div		= gen_image(
+		labels		= labels,
+		values		= values,
+		title		= f"Temperature through time ({count} samples) : Year {year}",
+		x_label		= "Date",
+		y_label		= "Temperature",
+		image_height	= image_height,
+		image_width	= image_width,
+		bar_width	= bar_width,
+		graph_type 	= "vbar"
+	)
+	"""
+
+	fig                      = figure(x_range=labels, height=image_height, width=image_width, title=title)
 
 	fig.title.align          = 'center'
 	fig.title.text_font_size = '1.5em'
@@ -139,16 +153,21 @@ def gen_image(labels: list[str], values: list[int | float], title: str, x_label:
 
 	if   graph_type == "vbar":    # vertical bar chart
 		fig.vbar(   x=x_label, top=y_label, width=bar_width, source=cds)
+
 	elif graph_type == "hbar":    # horizontal bar chart
 		fig.hbar(   x=x_label, top=y_label, width=bar_width, source=cds)
+
 	elif graph_type == "line":    # line chart
 		fig.line(   x=x_label, top=y_label, width=bar_width, source=cds, line_width=2)
+
 	elif graph_type == "scatter": # scatter plot
 		fig.scatter(x=x_label, top=y_label, width=bar_width, source=cds)
+
 	else:
 		raise ValueError(f"unknown graph type: {graph_type}")
 
 	script, div = components(fig)
+
 	return script, div
 
 
@@ -161,7 +180,7 @@ QueryBarWidth        = Annotated[float | None, Query(ge=0.1, le=1.0   )]
 from .. import db
 from .. import models
 
-@router.get("/charts/nodeinfo", response_class=HTMLResponse)
+@router.get("/charts/nodeinfo")
 async def mx_charts_nodeinfo(request: Request, response: Response, year: QueryYear, session_manager: db.SessionManagerDepRO, query_filter: models.NodeInfo.__filter__(),
 	count: QueryCount = 10, image_width: QueryImageDimension = 500, image_height: QueryImageDimension = 500, bar_width: QueryBarWidth=0.8):
 
@@ -201,25 +220,17 @@ async def mx_charts_nodeinfo(request: Request, response: Response, year: QueryYe
 	#query_filter_cls        = cls.get_filter_class()
 	#data_class, query_filter_cls = models._gen.init_model(model=cls, session_manager_t=session_manager)
 	#print(query_filter)
-	html_filters            = query_filter.gen_html_filters()
+
+	url_self                = "mx_charts_nodeinfo"
+	url_opts                = query_filter.model_dump()
+
+	container               = "#container"
+	html_filters            = query_filter.gen_html_filters(url_self)
 	#print("query_filter", type(query_filter), query_filter, type(html_filters), html_filters)
 
 	resp                    = cls.Query(session_manager=session_manager, query_filter=query_filter)
 	#print( resp )
 
-	"""
-	script, div		= gen_image(
-		labels		= labels,
-		values		= values,
-		title		= f"Temperature through time ({count} samples) : Year {year}",
-		x_label		= "Date",
-		y_label		= "Temperature",
-		image_height	= image_height,
-		image_width	= image_width,
-		bar_width	= bar_width,
-		graph_type 	= "vbar"
-	)
-	"""
 	script, div = "", ""
 
 	return templates.TemplateResponse(
@@ -231,11 +242,16 @@ async def mx_charts_nodeinfo(request: Request, response: Response, year: QueryYe
 			"year_selected": year,
 			"count"        : count,
 
-			"script"       : script,
-			"div"          : div,
-
+			"images"       : {
+				"rsi"  : {
+					"script"       : script,
+					"div"          : div,
+				}
+			},
 			"data"         : tuple(r.model_pretty_dump() for r in resp),
-			"html_filters" : html_filters
+			"html_filters" : html_filters,
+			"url_self"     : url_self,
+			"url_opts"     : url_opts
 		}
 	)
 

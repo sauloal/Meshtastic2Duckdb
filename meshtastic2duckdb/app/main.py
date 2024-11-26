@@ -72,28 +72,11 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # https://github.com/encode/starlette/blob/master/starlette/status.py
 
 
-
-"""
-print("CONNECTING ENGINE")
-db_engine   = db.dbEngineLocalFromEnv(verbose=False)
-#print(db_engine, type(db_engine))
-print("ENGINE CONNECTED")
-
-
-def get_engine():
-	#print("APP GET_ENGINE")
-	global db_engine
-	#print("APP GET_ENGINE", db_engine)
-	return db_engine
-
-db.get_engine = get_engine
-"""
-
 _ = db.get_engine()
 
 
 root_router = APIRouter(tags=["Root"], include_in_schema=False)
-api_router  = APIRouter(tags=["API" ], include_in_schema=True)
+api_router  = APIRouter(               include_in_schema=True)
 
 
 # https://github.com/encode/starlette/blob/master/starlette/status.py
@@ -116,11 +99,11 @@ async def favicon() -> None:
 
 
 
-@api_router.get("/")
+@api_router.get("/",         tags=["/api"])
 async def api_get() -> dict[str, list[str]]:
 	return { "endpoints": ["messages"] }
 
-@api_router.get("/messages")
+@api_router.get("/messages", tags=["/api/messages"])
 async def api_models_get() -> dict[str, list[str]]:
 	# TODO: Get from database
 	return { "endpoints": ["nodeinfo", "nodes", "position", "rangetest", "telemetry", "textmessage"] }
@@ -131,13 +114,13 @@ models.register(api_router, prefix="/messages", status=status, db=db)
 
 
 app.include_router(root_router, prefix='')
-app.include_router(htmx.router, prefix='/mx')
 app.include_router(api_router , prefix='/api')
+app.include_router(htmx.router, prefix='/mx')
 
 
 print("ROUTE")
 for route in app.routes:
-	print(f"  name {str(route.name):40s} path {str(route.path)}")
+	print(f"  name {str(route.name):50s} path {str(route.path)}")
 
 
 

@@ -4,21 +4,21 @@ import typing
 import datetime
 import dataclasses
 
-from typing import Annotated, Optional, Generator, Literal
+from typing     import Annotated, Optional, Generator, Literal
 
-from sqlalchemy             import BigInteger, SmallInteger, Integer, Text, Float, Boolean, LargeBinary
+from sqlalchemy import BigInteger, SmallInteger, Integer, Text, Float, Boolean, LargeBinary
 
-from fastapi import FastAPI, Depends, Query
-from fastapi import HTTPException
+from fastapi    import FastAPI, Depends, Query
+from fastapi    import HTTPException
 
 import pydantic
-from pydantic import BaseModel
+from pydantic   import BaseModel
 
-from sqlmodel import Field, Sequence, SQLModel, Column, Session, or_
+from sqlmodel   import Field, Sequence, SQLModel, Column, Session, or_
 
-from ._query import SharedFilterQuery, SharedFilterQueryParams, TimedFilterQuery, TimedFilterQueryParams
-from . import _converters as converters
-from .. import dbgenerics
+from ._query    import SharedFilterQuery, SharedFilterQueryParams, TimedFilterQuery, TimedFilterQueryParams
+from .          import _converters as converters
+from ..         import dbgenerics
 
 # https://docs.sqlalchemy.org/en/20/orm/dataclasses.html
 # https://docs.sqlalchemy.org/en/20/orm/declarative_tables.html
@@ -100,14 +100,15 @@ class ModelBase:
 	gateway_receive_time : int64 = Field(              sa_type=BigInteger()  , nullable=False, index=True )
 
 	@classmethod
-	def Query( cls, *, session_manager: dbgenerics.GenericSessionManager, query_filter: SharedFilterQuery ) -> "list[ModelBase]":
-		print("ModelBase: class query", "model", cls, "session_manager", session_manager, "query_filter", query_filter)
+	def Query( cls, *, session_manager: dbgenerics.GenericSessionManager, query_filter: SharedFilterQuery, filter_is_unique: str|None = None ) -> "list[ModelBase]":
+		print("ModelBase: class query", "model", cls, "session_manager", session_manager, "query_filter", query_filter, "filter_is_unique", filter_is_unique)
 		# https://fastapi.tiangolo.com/tutorial/sql-databases/#read-heroes
 
 		with session_manager as session:
-			qry     = query_filter(session, cls)
+			qry     = query_filter(session, cls, filter_is_unique=filter_is_unique)
 			results = session.exec(qry)
-			results = [r.to_dataclass() for r in results]
+			results = [r.to_dataclass() if hasattr(r, "to_dataclass") else r for r in results]
+
 		return results
 
 	@classmethod
@@ -128,21 +129,138 @@ class ModelBase:
 
 		nick      = name.lower()
 		filter_by = filters.endpoints()
+		fields    = cls.model_fields
+		tags      = [f"/api/messages/{name.lower()}"]
 
 		endpoints = { "endpoints": ["", "list"] + list(filter_by.keys()) }
 
 		prefix_u  = f"{prefix}/{nick}"
 
 		if True:
-			gen_endpoint(app=app, verb="GET",  endpoint=f"{prefix_u}",                                   response_model=dict[str, list[str]], fixed_response=endpoints,                                      name=f"api_{name}_get".lower().replace(" ","_"),                       summary=f"Get {name} Endpoints",             description="Get {name} Endpoints",             tags=[name], filter_key=None,      filter_is_list=False,   model=cls, session_manager_t=db_ro)
-			gen_endpoint(app=app, verb="POST", endpoint=f"{prefix_u}",                                   response_model=None,                 fixed_response=None,      status_code=status.HTTP_201_CREATED, name=f"api_{name}_add".lower().replace(" ","_"),                       summary=f"Add {name}",                       description="Add {name}",                       tags=[name], filter_key=None,      filter_is_list=False,   model=cls, session_manager_t=db_rw)
+			gen_endpoint(
+				app               = app,
+				verb              = "GET",
+				endpoint          = f"{prefix_u}",
+				response_model    = dict[str, list[str]],
+				fixed_response    = endpoints,
+				name              = f"api_{name}_get".lower().replace(" ","_"),
+				summary           = f"Get {name} Endpoints",
+				description       =  "Get {name} Endpoints",
+				tags              = tags,
+				filter_key        = None,
+				filter_is_list    = False,
+				model             = cls,
+				session_manager_t = db_ro
+			)
+			gen_endpoint(
+				app               = app,
+				verb              = "POST",
+				endpoint          = f"{prefix_u}",
+				response_model    = None,
+				fixed_response    = None,
+				status_code       = status.HTTP_201_CREATED,
+				name              = f"api_{name}_add".lower().replace(" ","_"),
+				summary           = f"Add {name}",
+				description       =  "Add {name}",
+				tags              = tags,
+				filter_key        = None,
+				filter_is_list    = False,
+				model             = cls,
+				session_manager_t = db_rw
+			)
 
-			gen_endpoint(app=app, verb="GET",  endpoint=f"{prefix_u}/list",                              response_model=list[data_cls],       fixed_response=None,      status_code=None,                    name=f"api_{name}_list".lower().replace(" ","_"),                      summary=f"Get {name} List",                  description="Get {name} List",                  tags=[name], filter_key=None,      filter_is_list=False,   model=cls, session_manager_t=db_ro)
+			gen_endpoint(
+				app               = app,
+				verb              = "GET",
+				endpoint          = f"{prefix_u}/list",
+				response_model    = list[data_cls],
+				fixed_response    = None,
+				status_code       = None,
+				name              = f"api_{name}_list".lower().replace(" ","_"),
+				summary           = f"Get {name} List",
+				description       =  "Get {name} List",
+				tags              = tags,
+				filter_key        = None,
+				filter_is_list    = False,
+				model             = cls,
+				session_manager_t = db_ro
+			)
 
+
+		filters = [ fe for fe in filter_by.keys() ]
+		gen_endpoint(
+				app               = app,
+				verb              = "GET",
+				endpoint          = f"{prefix_u}/filters",
+				response_model    = list[str],
+				fixed_response    = filters,
+				status_code       = None,
+				name              = f"api_{name}_get_filters".lower().replace(" ","_"),
+				summary           = f"Get {name} Filters",
+				description       =  "Get {name} Filters",
+				tags              = tags,
+				filter_key        = None,
+				filter_is_list    = False,
+				model             = cls,
+				session_manager_t = db_ro
+		)
 
 		for filter_endpoint, (attr_name, filter_type, is_list) in filter_by.items():
 			filter_endpoint_str = filter_endpoint.replace('-', ' ')
-			gen_endpoint(app=app, verb="GET" , endpoint=f"{prefix_u}/{filter_endpoint}/{{{attr_name}}}", response_model=list[data_cls],       fixed_response=None,      status_code=None,                    name=f"api_{name}_get_{filter_endpoint_str}".lower().replace(" ","_"), summary=f"Get {name} {filter_endpoint_str}", description="Get {name} {filter_endpoint_str}", tags=[name], filter_key=attr_name, filter_is_list=is_list, model=cls, session_manager_t=db_ro)
+			gen_endpoint(
+				app               = app,
+				verb              = "GET",
+				endpoint          = f"{prefix_u}/filters/{filter_endpoint}/{{{attr_name}}}",
+				response_model    = list[data_cls],
+				fixed_response    = None,
+				status_code       = None,
+				name              = f"api_{name}_get_filters_{filter_endpoint_str}".lower().replace(" ","_"),
+				summary           = f"Get {name} {filter_endpoint_str}",
+				description       =  "Get {name} {filter_endpoint_str}",
+				tags              = tags,
+				filter_key        = attr_name,
+				filter_is_list    = is_list,
+				model             = cls,
+				session_manager_t = db_ro
+			)
+
+
+		uniques = [ un for un in fields.keys() ]
+		gen_endpoint(
+				app               = app,
+				verb              = "GET",
+				endpoint          = f"{prefix_u}/uniques",
+				response_model    = list[str],
+				fixed_response    = uniques,
+				status_code       = None,
+				name              = f"api_{name}_get_uniques".lower().replace(" ","_"),
+				summary           = f"Get {name} Uniques",
+				description       =  "Get {name} Uniques",
+				tags              = tags,
+				filter_key        = None,
+				filter_is_list    = False,
+				model             = cls,
+				session_manager_t = db_ro
+		)
+
+		for field in uniques:
+			gen_endpoint(
+				app               = app,
+				verb              = "GET",
+				endpoint          = f"{prefix_u}/uniques/{field}",
+				response_model    = list[typing.Any],
+				fixed_response    = None,
+				status_code       = None,
+				name              = f"api_{name}_get_uniques_{field}".lower().replace(" ","_"),
+				summary           = f"Get {name} Uniques {field}",
+				description       =  "Get {name} Uniques {field}",
+				tags              = tags,
+				filter_key        = None,
+				filter_is_list    = False,
+				model             = cls,
+				session_manager_t = db_ro,
+				filter_is_unique  = field
+			)
 
 
 

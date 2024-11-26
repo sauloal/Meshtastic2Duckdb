@@ -73,6 +73,8 @@ def validate_time(vals: str) -> str:
 
 
 
+
+
 # https://fastapi.tiangolo.com/tutorial/dependencies/classes-as-dependencies/#classes-as-dependencies_1
 class SharedFilterQueryParams(BaseModel):
 	offset  : Annotated[ int                                , Query(default=0  , ge=0)         ]
@@ -86,22 +88,96 @@ class SharedFilterQueryParams(BaseModel):
 	q       : Annotated[ str | None                         , Query(default=None)              ]
 
 	# https://sqlmodel.tiangolo.com/tutorial/where/?h=select#where-and-expressions
-	def __call__(self, session: dbgenerics.GenericSession, cls):
+	def __call__(self, session: dbgenerics.GenericSession, cls, filter_is_unique: str|None=None):
 		for k in self.model_fields.keys():
 			v = getattr(self, k)
 			if isinstance(v, fastapi_params.Depends):
 				setattr(self, k, v.dependency())
 
-		sel = select(cls)
+		if filter_is_unique: # get unique values
+			print(f"FILTERING UNIQUE COLUMN: {filter_is_unique}")
+			sel = select( getattr(cls, filter_is_unique) )
+		else:
+			sel = select(cls)
+
 		qry = sel.offset(self.offset).limit(self.limit)
+
 		return qry
 
 	@classmethod
 	def endpoints(cls):
 		return {}
 
-	def gen_html_filters(self):
-		raise NotImplementedError()
+	def as_js_dict(self):
+		res = ""
+		for k in self.model_fields.keys():
+			res = f""" "{k}": "{getattr(self, k)}"  """
+		res = f"{{ {res} }}"
+		return res
+
+	def gen_html_filters(self, url):
+		#print("gen_html_filters :: SELF", self)
+		#filters = TimedFilterQueryParams.gen_html_filters(self, url, target=target)
+		filters = []
+
+		for name, label, field_type, hx_get, values in [
+			#["offset", "Offset", "select", None, None],
+			#["limit" , "Limit" , "select", None, None],
+			["order" , "Order" , "select", None, [["Ascending","asc"], ["Descending","dsc"]] ],
+		]:
+			if field_type == "select":
+				val = f"""
+				<label>{ label }</label>
+				<select id="select-{name}"
+					class="custom-select"
+					name="{name}"
+					autocomplete="off">
+				"""
+
+				if values is not None:
+					for v_name, v_val in values:
+						val += f"""
+					<option value="{v_val}">{v_name}</option>
+					"""
+				elif hx_get is not None:
+					val += f"""
+					<option hx-get="{{{{ url_for("{hx_get}", **{self.as_js_dict()}) }}}}"></option>
+				"""
+
+				val += """
+				</select>
+				"""
+			filters.append(val)
+		return filters
+
+		"""
+		<label>Year</label>
+		<select id="select-year"
+			class="custom-select"
+			name="year"
+			autocomplete="off"
+			hx-get="{{ url_for(root) }}"
+			hx-target="#container"
+			hx-vals="js:{count: document.getElementById('count').value}">
+
+			{% for year in years %}
+				<option value="{{year}}"
+				{% if year_selected == year %} selected {% endif %}>{{year}}</option>
+			{% endfor %}
+		</select>
+
+		<hr/>
+
+		<label>Count</label>
+		<input  type="number"
+			id="count"
+			name="count"
+			autocomplete="off"
+			value="{{ count }}"
+			hx-get="{{ url_for(root) }}"
+			hx-target="#container"
+			hx-vals="js:{year: document.getElementById('select-year').value}" />
+		"""
 
 SharedFilterQuery = Annotated[SharedFilterQueryParams, Depends(SharedFilterQueryParams)]
 
@@ -115,8 +191,8 @@ class TimedFilterQueryParams(SharedFilterQueryParams):
 	time_from  : Annotated[Optional[str]  , Query(default=None                    ), AfterValidator(validate_time) ]
 	time_length: Annotated[Optional[str]  , Query(default=None                    ), AfterValidator(validate_time) ]
 
-	def __call__(self, session: dbgenerics.GenericSession, cls):
-		qry = SharedFilterQueryParams.__call__(self, session, cls)
+	def __call__(self, session: dbgenerics.GenericSession, cls, filter_is_unique: str|None=None):
+		qry = SharedFilterQueryParams.__call__(self, session, cls, filter_is_unique=filter_is_unique)
 
 		for k in self.model_fields.keys():
 			v = getattr(self, k)
@@ -158,6 +234,45 @@ class TimedFilterQueryParams(SharedFilterQueryParams):
 				qry              = qry.where(cls.gateway_receive_time <= time_length_ts)
 
 		return qry
+
+	def gen_html_filters(self, url, target="#container"):
+		#print("gen_html_filters :: SELF", self)
+		filters = SharedFilterQueryParams.gen_html_filters(self, url)
+
+		for name, title, field_type, value in [
+		]:
+			val = ""
+			filters.append(val)
+		return filters
+		"""
+		<label>Year</label>
+		<select id="select-year"
+			class="custom-select"
+			name="year"
+			autocomplete="off"
+			hx-get="{{ url_for(root) }}"
+			hx-target="#container"
+			hx-vals="js:{count: document.getElementById('count').value}">
+
+			{% for year in years %}
+				<option value="{{year}}"
+				{% if year_selected == year %} selected {% endif %}>{{year}}</option>
+			{% endfor %}
+		</select>
+
+		<hr/>
+
+		<label>Count</label>
+		<input  type="number"
+			id="count"
+			name="count"
+			autocomplete="off"
+			value="{{ count }}"
+			hx-get="{{ url_for(root) }}"
+			hx-target="#container"
+			hx-vals="js:{year: document.getElementById('select-year').value}" />
+		</form>
+		"""
 
 	@classmethod
 	def endpoints(cls):

@@ -29,7 +29,11 @@
 
                 <hr/>
 
-		{{ html_filters | safe }}
+		<form hx-get="{{ url_for(url_self).include_query_params( **url_opts ) }}">
+		{% for f in html_filters %}
+			{{ f | safe }}
+		{% endfor %}
+		</form>
             </form>
         </div>
     </div>

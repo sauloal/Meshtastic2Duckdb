@@ -95,8 +95,8 @@ class NodeInfoFilterQueryParams(TimedFilterQueryParams):
 			**TimedFilterQueryParams.endpoints()
 		}
 
-	def __call__(self, session: dbgenerics.GenericSession, cls):
-		qry = TimedFilterQueryParams.__call__(self, session, cls)
+	def __call__(self, session: dbgenerics.GenericSession, cls, filter_is_unique: str|None=None):
+		qry = TimedFilterQueryParams.__call__(self, session, cls, filter_is_unique=filter_is_unique)
 
 		for k in self.model_fields.keys():
 			v = getattr(self, k)
@@ -138,9 +138,16 @@ class NodeInfoFilterQueryParams(TimedFilterQueryParams):
 
 		return qry
 
-	def gen_html_filters(self):
+	def gen_html_filters(self, url):
 		#print("gen_html_filters :: SELF", self)
-		return "gen_html_filters"
+		filters = TimedFilterQueryParams.gen_html_filters(self, url)
+
+		for name, title, field_type, value in [
+			
+		]:
+			val = ""
+			filters.append(val)
+		return filters
 		"""
 		<label>Year</label>
 		<select id="select-year"
@@ -170,49 +177,10 @@ class NodeInfoFilterQueryParams(TimedFilterQueryParams):
 			hx-vals="js:{year: document.getElementById('select-year').value}" />
 		</form>
 		"""
+		return "gen_html_filters"
 
 NodeInfoFilterQuery = Annotated[NodeInfoFilterQueryParams, Depends(NodeInfoFilterQueryParams)]
 
-
-
-"""
-@app.get( "/api/messages/nodeinfo",                                summary = "Get NodeInfo Endpoints",       description = "Get NodeInfo Endpoints",    response_description = "NodeInfo Endpoints",    tags = ["NodeInfo"])
-async def api_model_nodeinfo_get():
-        return { "endpoints": ["list", "by-user-id", "by-long-name", "by-short-name", "by-hw-model", "by-role", "by-from-id", "by-from-node", "by-to-id", "by-to-node"] }
-
-@app.post("/api/messages/nodeinfo",                                summary = "Add NodeInfo Instances",       description = "Add NodeInfo Instances",    response_description = "None",                  tags = ["NodeInfo"],    status_code = status.HTTP_201_CREATED)
-async def api_model_nodeinfo_post(  data: models.NodeInfoClass,    session_manager: db.SessionManagerDepRW,  request: Request,                          response: Response ) -> None:
-        return await api_model_post(data=data,                     session_manager=session_manager,          request=request,                           response=response )
-
-@app.get( "/api/messages/nodeinfo/list",                           summary = "Get NodeInfo Instances",       description = "Get NodeInfo Instances",    response_description = "List of NodeInfo",      tags = ["NodeInfo"])
-async def api_model_nodeinfo_list(                                 session_manager: db.SessionManagerDepRO,  request: Request,                          response: Response,     query_filter: models.NodeInfo.__filter__() ) -> list[models.NodeInfoClass]:
-        return await api_model_get( model=models.NodeInfo,         session_manager=session_manager,          request=request,                           response=response,      query_filter=query_filter  )
-
-@app.get( "/api/messages/nodeinfo/by-user-id/{user_id}",           summary = "Get NodeInfo Instances",       description = "Get NodeInfo Instances",    response_description = "List of NodeInfo",      tags = ["NodeInfo"])
-async def api_model_nodeinfo_by_user_id(user_id: str,              session_manager: db.SessionManagerDepRO,  request: Request,                          response: Response,     query_filter: models.NodeInfo.__filter__() ) -> list[models.NodeInfoClass]:
-        query_filter.userIds = [user_id]
-        return await api_model_get( model=models.NodeInfo,         session_manager=session_manager,          request=request,                           response=response,      query_filter=query_filter  )
-
-@app.get( "/api/messages/nodeinfo/by-long-name/{long_name}",       summary = "Get NodeInfo Instances",       description = "Get NodeInfo Instances",    response_description = "List of NodeInfo",      tags = ["NodeInfo"])
-async def api_model_nodeinfo_by_long_name(long_name: str,          session_manager: db.SessionManagerDepRO,  request: Request,                          response: Response,     query_filter: models.NodeInfo.__filter__() ) -> list[models.NodeInfoClass]:
-        query_filter.longNames = [long_name]
-        return await api_model_get( model=models.NodeInfo,         session_manager=session_manager,          request=request,                           response=response,      query_filter=query_filter  )
-
-@app.get( "/api/messages/nodeinfo/by-short-name/{short_name}",     summary = "Get NodeInfo Instances",       description = "Get NodeInfo Instances",    response_description = "List of NodeInfo",      tags = ["NodeInfo"])
-async def api_model_nodeinfo_by_short_name(short_name: str,        session_manager: db.SessionManagerDepRO,  request: Request,                          response: Response,     query_filter: models.NodeInfo.__filter__() ) -> list[models.NodeInfoClass]:
-        query_filter.shortNames = [short_name]
-        return await api_model_get( model=models.NodeInfo,         session_manager=session_manager,          request=request,                           response=response,      query_filter=query_filter  )
-
-@app.get( "/api/messages/nodeinfo/by-hw-model/{hw_model}",         summary = "Get NodeInfo Instances",       description = "Get NodeInfo Instances",    response_description = "List of NodeInfo",      tags = ["NodeInfo"])
-async def api_model_nodeinfo_by_hw_model(hw_model: str,            session_manager: db.SessionManagerDepRO,  request: Request,                          response: Response,     query_filter: models.NodeInfo.__filter__() ) -> list[models.NodeInfoClass]:
-        query_filter.hwModels = [hw_model]
-        return await api_model_get( model=models.NodeInfo,         session_manager=session_manager,          request=request,                           response=response,      query_filter=query_filter  )
-
-@app.get( "/api/messages/nodeinfo/by-role/{role}",                 summary = "Get NodeInfo Instances",       description = "Get NodeInfo Instances",    response_description = "List of NodeInfo",      tags = ["NodeInfo"])
-async def api_model_nodeinfo_by_role(role: str,                    session_manager: db.SessionManagerDepRO,  request: Request,                          response: Response,     query_filter: models.NodeInfo.__filter__() ) -> list[models.NodeInfoClass]:
-        query_filter.roles = [role]
-        return await api_model_get( model=models.NodeInfo,         session_manager=session_manager,          request=request,                           response=response,      query_filter=query_filter  )
-"""
 
 """
 ========

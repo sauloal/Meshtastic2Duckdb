@@ -15,20 +15,27 @@ def decode_packet(packet) -> "TelemetryClass|NodeInfoClass|PositionClass|TextMes
 
     if   message.portnum == "TELEMETRY_APP":
         return TelemetryClass.from_packet(packet)
+
     elif message.portnum == "NODEINFO_APP":
         return NodeInfoClass.from_packet(packet)
+
     elif message.portnum == "POSITION_APP":
         return PositionClass.from_packet(packet)
+
     elif message.portnum == "TEXT_MESSAGE_APP":
         return TextMessageClass.from_packet(packet)
+
     elif message.portnum == "RANGE_TEST_APP":
         return RangeTestClass.from_packet(packet)
+
     else:
         raise ValueError(f"Unknown portnum {message.portnum}. {packet}")
+
 
 def decode_node(node: dict[str, typing.Any]) -> "NodesClass":
     inst = NodesClass.from_packet(node)
     return inst
+
 
 def decode_nodes(nodes: dict[str, dict]) -> "list[NodesClass]":
     instances = [None] * len(nodes)
@@ -39,6 +46,7 @@ def decode_nodes(nodes: dict[str, dict]) -> "list[NodesClass]":
         inst = decode_node(node)
         instances[pos] = inst
     return instances
+
 
 def class_to_ORM(cls):
     orm_class_name = cls.__ormclass__
@@ -51,6 +59,7 @@ def class_to_ORM(cls):
     # print("orm_inst      ", orm_inst)
 
     return orm_inst
+
 
 def register(app, prefix, status, db):
 	NodeInfo   .register(app=app, prefix=prefix, gen_endpoint=gen_endpoint, status=status, db_ro=db.SessionManagerDepRO, db_rw=db.SessionManagerDepRW)

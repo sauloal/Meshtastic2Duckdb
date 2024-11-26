@@ -4,16 +4,16 @@ from ._message    import MessageClass, Message
 from ._base       import SharedFilterQuery, TimedFilterQuery
 from ..dbgenerics import GenericSession, GenericSessionManager, DbEngine
 
+from fastapi.responses import HTMLResponse, JSONResponse
 
 
-async def api_model_get( model: Message,      session_manager: GenericSessionManager, request: Request, response: Response, query_filter: SharedFilterQuery ) -> list[Message]:
+async def api_model_get( model: Message,      session_manager: GenericSessionManager, request: Request, response: Response, query_filter: SharedFilterQuery, filter_is_unique: str|None = None ) -> list[Message]:
 	#print("api_model_get", "model", model, "session_manager", session_manager, "request", request, "response", response, "query_filter", query_filter)
 	#https://fastapi.tiangolo.com/tutorial/sql-databases/#read-heroes
 
-	resp = model.Query(session_manager=session_manager, query_filter=query_filter)
+	resp = model.Query(session_manager=session_manager, query_filter=query_filter, filter_is_unique=filter_is_unique)
 
 	return resp
-
 
 
 async def api_model_post( data: MessageClass, session_manager: GenericSessionManager, request: Request, response: Response ) -> None:
@@ -37,9 +37,12 @@ def init_model(*, model: Message, session_manager_t):
 	query_filter = model.__filter__()
 	return data_class, query_filter
 
-def gen_endpoint(*, app: FastAPI, verb: str, endpoint: str, name: str, summary: str, description: str, model: Message, session_manager_t, tags: list[str], filter_key:str=None, filter_is_list: bool=False, response_model=None, fixed_response=None, status_code=None):
+
+def gen_endpoint(*, app: FastAPI, verb: str, endpoint: str, name: str, summary: str, description: str, model: Message, session_manager_t, tags: list[str], filter_key:str=None, filter_is_list: bool=False, response_model=None, fixed_response=None, status_code=None, filter_is_unique: str|None=None):
 	assert verb in ("GET","POST")
+
 	alias        = None
+
 	data_class, query_filter = init_model(model=model, session_manager_t=session_manager_t)
 
 
@@ -63,6 +66,17 @@ def gen_endpoint(*, app: FastAPI, verb: str, endpoint: str, name: str, summary: 
 				setattr(filter_query, filter_key,  path_param)
 
 	if verb == "GET":
+		async def get_endpoint(session_manager: session_manager_t, request: Request, response: Response, query_filter: query_filter, path_param: str|None = None) -> response_model:
+			if fixed_response:
+				return fixed_response
+
+			mod_filter_key(filter_query=query_filter, filter_key=filter_key, filter_is_list=filter_is_list, path_param=path_param)
+
+			res = await api_model_get(model=model, session_manager=session_manager,    request=request,  response=response, query_filter=query_filter, filter_is_unique=filter_is_unique)
+
+			return res
+
+
 		if alias is not None:
 			@app.get(
 				endpoint,
@@ -75,12 +89,7 @@ def gen_endpoint(*, app: FastAPI, verb: str, endpoint: str, name: str, summary: 
 				status_code    = status_code
 			)
 			async def endpoint(                             session_manager: session_manager_t, request: Request, response: Response, query_filter: query_filter, path_param: str = Path(alias=alias)) -> response_model:
-				if fixed_response:
-					return fixed_response
-
-				mod_filter_key(filter_query=query_filter, filter_key=filter_key, filter_is_list=filter_is_list, path_param=path_param)
-
-				return await api_model_get(model=model, session_manager=session_manager,    request=request,  response=response, query_filter=query_filter)
+				return await get_endpoint(session_manager=session_manager, request=request, response=response, query_filter=query_filter, path_param=path_param)
 
 		else:
 			@app.get(
@@ -94,10 +103,7 @@ def gen_endpoint(*, app: FastAPI, verb: str, endpoint: str, name: str, summary: 
 				status_code    = status_code
 			)
 			async def endpoint(                             session_manager: session_manager_t, request: Request, response: Response, query_filter: query_filter) -> response_model:
-				if fixed_response:
-					return fixed_response
-
-				return await api_model_get(model=model, session_manager=session_manager,    request=request,  response=response, query_filter=query_filter)
+				return await get_endpoint(session_manager=session_manager, request=request, response=response, query_filter=query_filter, path_param=None)
 
 	elif verb == "POST":
 		if alias is not None:
