@@ -275,7 +275,7 @@ async def mx_charts_nodeinfo(request: Request, response: Response, year: QueryYe
 	#print(query_filter)
 
 	url_self                = "mx_charts_nodeinfo"
-	url_opts                = query_filter.model_dump()
+	url_opts                = {k:v for k,v in query_filter.model_dump().items() if v is not None}
 
 	container               = "#container"
 	html_filters            = query_filter.gen_html_filters(url_self, lambda column: cls.Query(session_manager=session_manager, query_filter=query_filter, filter_is_unique=column))

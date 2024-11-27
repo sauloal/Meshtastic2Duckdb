@@ -1,0 +1,12 @@
+{% from "partials/form_filter_select.html" import build_form_filter_select with context %}
+
+{% macro build_form_filter(url_self, url_opts, target, html_filters) %}
+	<form hx-get="{{ url_for(url_self).include_query_params( **url_opts ) }}" hx-params="*" hx-trigger="submit" hx-target="#{{ target }}">
+		{% for (cls, name, label, field_type, values) in html_filters %}
+			{% if field_type == "select" %}
+				{{ build_form_filter_select(cls, name, label, values) }}
+			{% endif %}
+		{% endfor %}
+		<input type="submit" name="Update" value="Update"/>
+	</form>
+{% endmacro  %}

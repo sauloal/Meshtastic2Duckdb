@@ -1,13 +1,16 @@
+{% from "partials/form_filter.html" import build_form_filter with context %}
+
 {% block content %}
+
 <p class="lead">Meshtastic Logger - {{ title }} ({{ data | length }})</p>
 
 <div class="row">
-	<div class="col-2">
-		<form hx-get="{{ url_for(url_self).include_query_params( **url_opts ) }}">
-		{% for f in html_filters %}
-			{{ f | safe }}
-		{% endfor %}
-		</form>
+	<div class="col-4">
+{#
+		https://htmx.org/attributes/hx-params/
+#}
+
+		{{ build_form_filter(url_self, url_opts, target, html_filters) }}
 
 		<hr/>
 

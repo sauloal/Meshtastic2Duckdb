@@ -76,11 +76,11 @@ class Roles(str, Enum):
 
 
 class NodeInfoFilterQueryParams(TimedFilterQueryParams):
-	userIds    : Annotated[Optional[str  ], Query(default=None ) ]
-	shortNames : Annotated[Optional[str  ], Query(default=None ) ]
-	longNames  : Annotated[Optional[str  ], Query(default=None ) ]
-	hwModels   : Annotated[Optional[str  ], Query(default=None ) ]
-	roles      : Annotated[Optional[str  ], Query(default=None ) ]
+	userIds    : Annotated[Optional[str], Query(default=None ) ]
+	shortNames : Annotated[Optional[str], Query(default=None ) ]
+	longNames  : Annotated[Optional[str], Query(default=None ) ]
+	hwModels   : Annotated[Optional[str], Query(default=None ) ]
+	roles      : Annotated[Optional[str], Query(default=None ) ]
 
 	@classmethod
 	def endpoints(cls):
@@ -103,26 +103,29 @@ class NodeInfoFilterQueryParams(TimedFilterQueryParams):
 			if isinstance(v, fastapi_params.Depends):
 				setattr(self, k, v.dependency())
 
+		for a in ["userIds", "shortNames", "longNames", "hwModels", "roles"]:
+			setattr(self, a, None if getattr(self, a) in ("",None) else getattr(self, a))
+
 		if self.userIds is not None:
-			print(" USER IDS    ", self.userIds)
+			print(f" USER IDS    '{self.userIds}'")
 			user_ids = self.userIds.split(',')
 			if user_ids:
 				qry = qry.where(cls.user_id.in_( user_ids ))
 
 		if self.shortNames is not None:
-			print(" SHORT NAMES ", self.shortNames)
+			print(f" SHORT NAMES '{self.shortNames}'")
 			short_names = self.shortNames.split(',')
 			if short_names:
 				qry = qry.where(cls.shortName.in_( short_names ))
 
 		if self.longNames is not None:
-			print(" LONG NAMES  ", self.longNames)
+			print(f" LONG NAMES  '{self.longNames}'")
 			long_names = self.longNames.split(',')
 			if long_names:
 				qry = qry.where(cls.longName.in_( long_names ))
 
 		if self.hwModels is not None:
-			print(" HW MODELS   ", self.hwModels)
+			print(f" HW MODELS   '{self.hwModels}'")
 			hw_models = self.hwModels.split(',')
 			if long_names:
 				qry = qry.where(cls.hwModel.in_( hw_models ))
@@ -130,11 +133,16 @@ class NodeInfoFilterQueryParams(TimedFilterQueryParams):
 		if self.roles is not None:
 			roles = self.roles.split(",")
 			if roles:
-				print(" ROLES       ", self.roles)
-				roles = self.roles.split(",")
-				if not all(r in Roles.__members__ for r in roles):
-					raise HTTPException(status_code=400, detail="INVALID ROLES: " + ",".join(r for r in roles if r not in Roles.__members__))
-				qry = qry.where( cls.role.in_(roles) )
+				print(f" ROLES       '{self.roles}'")
+				roles     = self.roles.split(",")
+				roles     = tuple(r for r in roles if r)
+				if len(roles) > 0:
+					role_vals = tuple(r.value for r in Roles.__members__.values())
+					#print(Roles.__members__, role_vals)
+					if not all(r in role_vals for r in roles):
+						raise HTTPException(status_code=400, detail=f"INVALID ROLES: {roles}. " + ",".join(r for r in roles if r not in role_vals))
+					print("  FILTERING ROLES")
+					qry = qry.where( cls.role.in_(roles) )
 
 		return qry
 
@@ -158,15 +166,16 @@ class NodeInfoFilterQueryParams(TimedFilterQueryParams):
 		print(f"gen_html_filters {user_ids}")
 
 		filter_opts = [
-			["userIds"   , "User IDs"       , "select", [["-", ""]] + [[r,r] for r in user_ids         ] ],
-			["shortNames", "Short Names"    , "select", [["-", ""]] + [[r,r] for r in shortNames       ] ],
-			["longNames" , "Long Names"     , "select", [["-", ""]] + [[r,r] for r in longNames        ] ],
-			["hwModels"  , "Hardware Models", "select", [["-", ""]] + [[r,r] for r in hwModels         ] ],
-			["roles"     , "Roles"          , "select", [["-", ""]] + [[r,r] for r in Roles.__members__] ],
+			[self, "userIds"   , "User IDs"       , "select", [["-", ""]] + [[r,r] for r in user_ids         ] ],
+			[self, "shortNames", "Short Names"    , "select", [["-", ""]] + [[r,r] for r in shortNames       ] ],
+			[self, "longNames" , "Long Names"     , "select", [["-", ""]] + [[r,r] for r in longNames        ] ],
+			[self, "hwModels"  , "Hardware Models", "select", [["-", ""]] + [[r,r] for r in hwModels         ] ],
+			[self, "roles"     , "Roles"          , "select", [["-", ""]] + [[r,r] for r in Roles.__members__] ],
 		]
 
 		filters     = TimedFilterQueryParams.gen_html_filters(self, url)
-		filters.extend( gen_html_filters(self, url, filter_opts) )
+		#filters.extend( gen_html_filters(self, url, filter_opts) )
+		filters.extend( filter_opts )
 
 		return filters
 

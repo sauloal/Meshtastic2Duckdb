@@ -109,15 +109,15 @@ def gen_html_filters(inst, url: str, filter_opts: list[ tuple[str,str,str, list[
 
 # https://fastapi.tiangolo.com/tutorial/dependencies/classes-as-dependencies/#classes-as-dependencies_1
 class SharedFilterQueryParams(BaseModel):
-	offset  : Annotated[ int                                , Query(default=0  , ge=0)         ]
-	limit   : Annotated[ int                                , Query(default=10 , gt=0, le=100) ]
-	dryrun  : Annotated[ bool                               , Query(default=False)             ]
-	order   : Annotated[ Literal["asc"       , "dsc"       ], Query(default="asc")             ]
+	offset  : Annotated[ int                  |None, Query(default= 0 , ge=0)         ]
+	limit   : Annotated[ int                  |None, Query(default=10 , gt=0, le=100) ]
+	#dryrun  : Annotated[ bool                 |None, Query(default=False)             ]
+	order   : Annotated[ Literal["asc", "dsc"]|None, Query(default="asc")             ]
+	# q       : Annotated[ str                  |None              , Query(default=None)              ]
 	# reversed: Annotated[ bool                               , Query(default=False)             ]
 	# order_by: Annotated[ Literal["created_at", "updated_at"], Query(default="created_at")      ]
 	# group_by: Annotated[ Literal["created_at", "updated_at"], Query(default="created_at")      ]
 	# tags    : list[str] = []
-	q       : Annotated[ str | None                         , Query(default=None)              ]
 
 	# https://sqlmodel.tiangolo.com/tutorial/where/?h=select#where-and-expressions
 	def __call__(self, session: dbgenerics.GenericSession, cls, filter_is_unique: str|None=None):
@@ -126,15 +126,35 @@ class SharedFilterQueryParams(BaseModel):
 			if isinstance(v, fastapi_params.Depends):
 				setattr(self, k, v.dependency())
 
+		for a in ["offset", "limit", "order"]:
+			setattr(self, a, None if getattr(self, a) in ("",None) else getattr(self, a))
+
+
+
 		if filter_is_unique: # get unique values
 			print(f"FILTERING UNIQUE COLUMN: {filter_is_unique}")
 			sel = select( getattr(cls, filter_is_unique) ).distinct()
 		else:
 			sel = select(cls)
 
-		qry = sel.offset(self.offset).limit(self.limit)
 
-		return qry
+
+		if self.order is not None:
+			print(f" ORDER       '{self.order}'")
+			if self.order == "asc":
+				sel = sel.order_by( cls.gateway_receive_time.asc() )
+			else:
+				sel = sel.order_by( cls.gateway_receive_time.desc() )
+
+		if self.offset is not None:
+			print(f" OFFSET      '{self.offset}'")
+			sel = sel.offset(self.offset)
+
+		if self.limit  is not None:
+			print(f" LIMIT       '{self.limit}'")
+			sel = sel.limit(self.limit)
+
+		return sel
 
 	@classmethod
 	def endpoints(cls):
@@ -151,12 +171,25 @@ class SharedFilterQueryParams(BaseModel):
 		#print("gen_html_filters :: SELF", self)
 		#filters = TimedFilterQueryParams.gen_html_filters(self, url, target=target)
 
+		print(f"gen_html_filters: {self}")
+
 		filter_opts = [
-			["order" , "Order" , "select", [["Ascending","asc"], ["Descending","dsc"]] ],
+			[self, "order" , "Order" , "select", [
+				["Ascending" ,"asc"],
+				["Descending","dsc"]
+			]],
+			[self, "limit" , "Limit" , "select", [
+				[ "10",  "10"],
+				[ "25",  "25"],
+				[ "50",  "50"],
+				["100", "100"],
+				["All", "1000000000"]
+			]]
 		]
 
 		filters = []
-		filters.extend( gen_html_filters(self, url, filter_opts) )
+		#filters.extend( gen_html_filters(self, url, filter_opts) )
+		filters.extend( filter_opts )
 
 		return filters
 
@@ -210,18 +243,21 @@ class TimedFilterQueryParams(SharedFilterQueryParams):
 			if isinstance(v, fastapi_params.Depends):
 				setattr(self, k, v.dependency())
 
+		for a in ["since", "until", "time_from", "time_length"]:
+			setattr(self, a, None if getattr(self, a) in ("",None) else getattr(self, a))
+
 		if self.since is not None:
 			if self.time_from is None:
-				print(" SINCE", self.since, type(self.since))
+				print(f" SINCE       '{self.since}' {type(self.since)}")
 				qry = qry.where(cls.gateway_receive_time >= self.since)
 
 		if self.until is not None:
 			if self.time_length is None:
-				print(" UNTIL", self.until)
+				print(f" UNTIL       '{self.until}'")
 				qry = qry.where(cls.gateway_receive_time <= self.until)
 
 		if self.time_from is not None:
-			print(" TIME_FROM", self.time_from)
+			print(f" TIME_FROM   '{self.time_from}'")
 			time_from      = self.time_from
 			assert len(time_from) >= 2
 
@@ -235,7 +271,7 @@ class TimedFilterQueryParams(SharedFilterQueryParams):
 			qry            = qry.where(cls.gateway_receive_time >= time_from_ts)
 
 			if self.time_length is not None:
-				print(" TIME_LENGTH", self.time_length)
+				print(f" TIME_LENGTH '{self.time_length}'")
 				time_length      = self.time_length
 				assert len(time_length) >= 2
 
@@ -254,7 +290,7 @@ class TimedFilterQueryParams(SharedFilterQueryParams):
 		filter_opts = [
 			#["since"      , "Since" , "select",  None],
 			#["until"      , "Until" , "select",  None],
-			["time_from"  , "From"  , "select", [
+			[self, "time_from"  , "From"  , "select", [
 					[ "1 Day"   ,  "1D"],
 					[ "3 Days"  ,  "3D"],
 					[ "1 Week"  ,  "1W"],
@@ -266,7 +302,7 @@ class TimedFilterQueryParams(SharedFilterQueryParams):
 					[ "Forever" , "30Y"],
 				]
 			],
-			["time_length", "Length", "select", [
+			[self, "time_length", "Length", "select", [
 					[ "1 Hour"  ,  "1h"],
 					[ "3 Hours" ,  "3h"],
 					[ "6 Hours" ,  "6h"],
@@ -285,7 +321,8 @@ class TimedFilterQueryParams(SharedFilterQueryParams):
 		]
 
 		filters     = SharedFilterQueryParams.gen_html_filters(self, url)
-		filters.extend( gen_html_filters(self, url, filter_opts) )
+		#filters.extend( gen_html_filters(self, url, filter_opts) )
+		filters.extend( filter_opts )
 
 		return filters
 
