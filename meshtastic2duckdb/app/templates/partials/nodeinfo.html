@@ -1,9 +1,15 @@
 {% block content %}
-    <p class="lead">Meshtastic Logger - {{ title }} ({{ data | length }})</p>
+<p class="lead">Meshtastic Logger - {{ title }} ({{ data | length }})</p>
 
-    <div class="row">
-        <div class="col-2">
-                <hr/>
+<div class="row">
+	<div class="col-2">
+		<form hx-get="{{ url_for(url_self).include_query_params( **url_opts ) }}">
+		{% for f in html_filters %}
+			{{ f | safe }}
+		{% endfor %}
+		</form>
+
+		<hr/>
 
 		<table class="table table-sm table-hover thead-dark text-nowrap table-bordered">
 			<thead>
@@ -27,14 +33,17 @@
 			</tbody>
 		</table>
 
-                <hr/>
+		<hr/>
 
-		<form hx-get="{{ url_for(url_self).include_query_params( **url_opts ) }}">
-		{% for f in html_filters %}
-			{{ f | safe }}
+		<div>
+		{% for image_title, image_data in images.items() %}
+			<div name="{{ image_title }}">
+			<label>{{ image_title }}</label>
+			{{ image_data.div    | safe }}
+			{{ image_data.script | safe }}
+			</div>
 		{% endfor %}
-		</form>
-            </form>
-        </div>
-    </div>
+		</div>
+	</div>
+</div>
 {% endblock %}

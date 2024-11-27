@@ -16,7 +16,7 @@ from pydantic   import BaseModel
 
 from sqlmodel   import Field, Sequence, SQLModel, Column, Session, or_
 
-from ._query    import SharedFilterQuery, SharedFilterQueryParams, TimedFilterQuery, TimedFilterQueryParams
+from ._query    import SharedFilterQuery, SharedFilterQueryParams, TimedFilterQuery, TimedFilterQueryParams, gen_html_filters
 from .          import _converters as converters
 from ..         import dbgenerics
 

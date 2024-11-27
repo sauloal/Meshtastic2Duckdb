@@ -138,46 +138,37 @@ class NodeInfoFilterQueryParams(TimedFilterQueryParams):
 
 		return qry
 
-	def gen_html_filters(self, url):
+
+	def gen_html_filters(self, url, query):
 		#print("gen_html_filters :: SELF", self)
-		filters = TimedFilterQueryParams.gen_html_filters(self, url)
 
-		for name, title, field_type, value in [
-			
-		]:
-			val = ""
-			filters.append(val)
+		"""
+		userIds    : Annotated[Optional[str  ], Query(default=None ) ]
+		shortNames : Annotated[Optional[str  ], Query(default=None ) ]
+		longNames  : Annotated[Optional[str  ], Query(default=None ) ]
+		hwModels   : Annotated[Optional[str  ], Query(default=None ) ]
+		roles      : Annotated[Optional[str  ], Query(default=None ) ]
+		"""
+
+		user_ids   = query("user_id")
+		shortNames = query("longName")
+		longNames  = query("shortName")
+		hwModels   = query("hwModel")
+
+		print(f"gen_html_filters {user_ids}")
+
+		filter_opts = [
+			["userIds"   , "User IDs"       , "select", [["-", ""]] + [[r,r] for r in user_ids         ] ],
+			["shortNames", "Short Names"    , "select", [["-", ""]] + [[r,r] for r in shortNames       ] ],
+			["longNames" , "Long Names"     , "select", [["-", ""]] + [[r,r] for r in longNames        ] ],
+			["hwModels"  , "Hardware Models", "select", [["-", ""]] + [[r,r] for r in hwModels         ] ],
+			["roles"     , "Roles"          , "select", [["-", ""]] + [[r,r] for r in Roles.__members__] ],
+		]
+
+		filters     = TimedFilterQueryParams.gen_html_filters(self, url)
+		filters.extend( gen_html_filters(self, url, filter_opts) )
+
 		return filters
-		"""
-		<label>Year</label>
-		<select id="select-year"
-			class="custom-select"
-			name="year"
-			autocomplete="off"
-			hx-get="{{ url_for(root) }}"
-			hx-target="#container"
-			hx-vals="js:{count: document.getElementById('count').value}">
-
-			{% for year in years %}
-				<option value="{{year}}"
-				{% if year_selected == year %} selected {% endif %}>{{year}}</option>
-			{% endfor %}
-		</select>
-
-		<hr/>
-
-		<label>Count</label>
-		<input  type="number"
-			id="count"
-			name="count"
-			autocomplete="off"
-			value="{{ count }}"
-			hx-get="{{ url_for(root) }}"
-			hx-target="#container"
-			hx-vals="js:{year: document.getElementById('select-year').value}" />
-		</form>
-		"""
-		return "gen_html_filters"
 
 NodeInfoFilterQuery = Annotated[NodeInfoFilterQueryParams, Depends(NodeInfoFilterQueryParams)]
 
