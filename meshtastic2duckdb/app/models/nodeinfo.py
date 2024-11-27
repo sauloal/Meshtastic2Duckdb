@@ -150,17 +150,9 @@ class NodeInfoFilterQueryParams(TimedFilterQueryParams):
 	def gen_html_filters(self, url, query):
 		#print("gen_html_filters :: SELF", self)
 
-		"""
-		userIds    : Annotated[Optional[str  ], Query(default=None ) ]
-		shortNames : Annotated[Optional[str  ], Query(default=None ) ]
-		longNames  : Annotated[Optional[str  ], Query(default=None ) ]
-		hwModels   : Annotated[Optional[str  ], Query(default=None ) ]
-		roles      : Annotated[Optional[str  ], Query(default=None ) ]
-		"""
-
 		user_ids   = query("user_id")
-		shortNames = query("longName")
-		longNames  = query("shortName")
+		shortNames = query("shortName")
+		longNames  = query("longName")
 		hwModels   = query("hwModel")
 
 		print(f"gen_html_filters {user_ids}")

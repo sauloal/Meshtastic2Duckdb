@@ -2,18 +2,28 @@
 
 {% block content %}
 
+<h2>Node Info</h2>
+
 <p class="lead">Meshtastic Logger - {{ title }} ({{ data | length }})</p>
 
+<div class="row" loopid="0">
+	{% for image_title, image_data in images.items() %}
+		<div class="col-6" loopid="{{ loop.index0 }}">
+			<div name="{{ image_title }}">
+				{{ image_data.div    | safe }}
+				{{ image_data.script | safe }}
+			</div>
+		</div>
+		{% if loop.index0 != 0 and loop.index0 % 2 == 0 %}
+</div>
+<div class="row" loopid="{{ loop.index }}">
+		{% endif %}
+
+	{% endfor %}
+</div>
+
 <div class="row">
-	<div class="col-4">
-{#
-		https://htmx.org/attributes/hx-params/
-#}
-
-		{{ build_form_filter(url_self, url_opts, target, html_filters) }}
-
-		<hr/>
-
+	<div class="col-9" style="max-height:100%;overflow:auto">
 		<table class="table table-sm table-hover thead-dark text-nowrap table-bordered">
 			<thead>
 				<tr>
@@ -35,18 +45,14 @@
 				{% endfor %}
 			</tbody>
 		</table>
-
-		<hr/>
-
-		<div>
-		{% for image_title, image_data in images.items() %}
-			<div name="{{ image_title }}">
-			<label>{{ image_title }}</label>
-			{{ image_data.div    | safe }}
-			{{ image_data.script | safe }}
-			</div>
-		{% endfor %}
-		</div>
 	</div>
+
+	<div class="col-3">
+		{# https://htmx.org/attributes/hx-params/ #}
+		{% set target="#container" %}
+		{{ build_form_filter(url_self, url_opts, target, html_filters) }}
+	</div>
+
 </div>
+
 {% endblock %}

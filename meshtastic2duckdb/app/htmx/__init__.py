@@ -233,9 +233,32 @@ QueryBarWidth        = Annotated[float | None, Query(ge=0.1, le=1.0   )]
 from .. import db
 from .. import models
 
+def gen_image_data(resp, x_name, y_names ):
+	resp_dict = {}
+
+	for r in resp:
+		k = r.longName
+		resp_dict[k] = resp_dict.get(k, [])
+
+		if len(resp_dict[k]) == 0:
+			for l in range(len(y_names)+1):
+				resp_dict[k].append([])
+
+		# Assumes X is always time
+		resp_dict[k][0].append( datetime.datetime.utcfromtimestamp( getattr(r, x_name) ) )
+		for y_pos, y_name in enumerate(y_names):
+			resp_dict[k][y_pos+1].append( getattr(r, y_name) )
+
+	# assumes multiline
+	labels = sorted(resp_dict.keys())
+	values = tuple( tuple(resp_dict[k][i] for k in sorted(resp_dict.keys())) for i in range(len(y_names) + 1) )
+
+	return { "labels": labels, "values": values }
+
+
 @router.get("/charts/nodeinfo")
 async def mx_charts_nodeinfo(request: Request, response: Response, year: QueryYear, session_manager: db.SessionManagerDepRO, query_filter: models.NodeInfo.__filter__(),
-	count: QueryCount = 10, image_width: QueryImageDimension = 500, image_height: QueryImageDimension = 500, bar_width: QueryBarWidth=0.8):
+	count: QueryCount = 10, image_width: QueryImageDimension = 500, image_height: QueryImageDimension = 250, bar_width: QueryBarWidth=0.8):
 
 	"""
 	print(f"mx_charts_temp {year=} {count=} {image_width=} {image_height=} {bar_width=} {session_manager=}")
@@ -284,17 +307,20 @@ async def mx_charts_nodeinfo(request: Request, response: Response, year: QueryYe
 	resp                    = cls.Query(session_manager=session_manager, query_filter=query_filter)
 	#print( resp )
 
-	resp_dict = {}
-	for r in resp:
-		k = r.longName
-		resp_dict[k] = resp_dict.get(k, [[],[]])
-		resp_dict[k][0].append( datetime.datetime.utcfromtimestamp( r.rxTime ) )
-		resp_dict[k][1].append( r.rxRssi )
 
 	images                  = {
 		"Rx Rssi": gen_image(
-			labels		=                         sorted(resp_dict.keys()),
-			values		= tuple(( tuple(resp_dict[k][0] for k in sorted(resp_dict.keys())), tuple(resp_dict[k][1] for k in sorted(resp_dict.keys())) )),
+			**gen_image_data(resp, "rxTime", ["rxRssi"] ),
+			image_height	= image_height,
+			image_width	= image_width,
+			bar_width	= bar_width,
+			title		= f"Rx Rssi through time ({len(resp)} samples)",
+			x_label		= "Time",
+			y_label		= "Rx Rssi",
+			graph_type 	= "multiline"
+		),
+		"Rx Snr": gen_image(
+			**gen_image_data(resp, "rxTime", ["rxSnr"] ),
 			image_height	= image_height,
 			image_width	= image_width,
 			bar_width	= bar_width,
@@ -303,8 +329,6 @@ async def mx_charts_nodeinfo(request: Request, response: Response, year: QueryYe
 			y_label		= "Rx Rssi",
 			graph_type 	= "multiline"
 		)
-
-		#"Rx Snr" : ""
 	}
 
 	return templates.TemplateResponse(

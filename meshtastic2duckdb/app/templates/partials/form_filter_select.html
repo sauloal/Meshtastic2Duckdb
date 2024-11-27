@@ -1,11 +1,16 @@
 {% macro build_form_filter_select(cls, name, label, values) %}
 
-	<label>{{ label }}</label>
+<tr>
 
-	<select id="select-{{name}}"
-		class="custom-select"
-		name="{{name}}"
-		autocomplete="off">
+<td>
+<label>{{ label }}</label>
+</td>
+
+<td>
+<select id="select-{{name.lower().replace("_","")}}"
+	name="{{name}}"
+	class="custom-select"
+	autocomplete="off">
 
 	{% if values is not none %}
 		{% set curr = cls[name] | string() %}
@@ -14,13 +19,10 @@
 			{% set nval = v_val     | string() %}
 			<option value="{{ nval }}" {{ "selected" if nval == curr else ""}}>{{ v_name }}</option>
 		{% endfor %}
-
-		{#
-			elif hx_get is not None:
-			val += f"""
-			<option hx-get="{{{{ url_for("{hx_get}", **{self.as_js_dict()}) }}}}"></option>
-		#}
 	{% endif %}
 </select>
+</td>
+
+</tr>
 
 {% endmacro  %}
