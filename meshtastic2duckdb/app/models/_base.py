@@ -7,14 +7,15 @@ import dataclasses
 from typing     import Annotated, Optional, Generator, Literal
 
 from sqlalchemy import BigInteger, SmallInteger, Integer, Text, Float, Boolean, LargeBinary
+from sqlalchemy import func, select
 
 from fastapi    import FastAPI, Depends, Query
 from fastapi    import HTTPException
 
 import pydantic
-from pydantic   import BaseModel
+from   pydantic import BaseModel
 
-from sqlmodel   import Field, Sequence, SQLModel, Column, Session, or_
+from   sqlmodel import Field, Sequence, SQLModel, Column, Session, or_
 
 from ._query    import SharedFilterQuery, SharedFilterQueryParams, TimedFilterQuery, TimedFilterQueryParams, gen_html_filters
 from .          import _converters as converters
@@ -110,6 +111,30 @@ class ModelBase:
 			results = [r.to_dataclass() if hasattr(r, "to_dataclass") else r for r in results]
 
 		return results
+
+	@classmethod
+	def Count( cls, *, session_manager: dbgenerics.GenericSessionManager, query_filter: SharedFilterQuery ) -> tuple[int, int]:
+		print("ModelBase: class count")
+
+		count_all, count_filter = -1, -1
+
+		q_filter = query_filter.__class__(**{k:v for k,v in query_filter.model_dump().items() if k not in ["offset","limit"]})
+
+		with session_manager as session:
+			qry          = query_filter(session, cls)
+			count_all    = session.query(cls).count()
+			#count_filter = len(session.exec(q_filter(session, cls)).all())
+			count_filter = session\
+				.execute(
+					select( func.count() )\
+					.select_from(
+						q_filter(session, cls)\
+							.subquery()
+					)\
+				)\
+				.scalar_one()
+
+		return count_all, count_filter
 
 	@classmethod
 	def from_dataclass(cls, inst: ModelBaseClass) -> "Message":

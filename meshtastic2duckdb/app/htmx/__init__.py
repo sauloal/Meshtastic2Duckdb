@@ -25,6 +25,10 @@ router    = APIRouter(tags=["HTMX"], include_in_schema=False, default_response_c
 
 templates = Jinja2Templates(directory="templates")
 
+templates.env.filters["format_integer"] = lambda x: f"{x:,d}"
+
+
+
 def year_get_min():
 	return 2023
 
@@ -46,6 +50,7 @@ def get_urls():
 
 QueryYear  = Annotated[int | None, AfterValidator(validate_year),  Query(default_factory=year_get_max)]
 QueryCount = Annotated[int | None, Query(ge=5, le=1_000)]
+
 
 
 
@@ -305,6 +310,7 @@ async def mx_charts_nodeinfo(request: Request, response: Response, year: QueryYe
 	#print("query_filter", type(query_filter), query_filter, type(html_filters), html_filters)
 
 	resp                    = cls.Query(session_manager=session_manager, query_filter=query_filter)
+	count_all, count_filter = cls.Count(session_manager=session_manager, query_filter=query_filter)
 	#print( resp )
 
 
@@ -324,9 +330,9 @@ async def mx_charts_nodeinfo(request: Request, response: Response, year: QueryYe
 			image_height	= image_height,
 			image_width	= image_width,
 			bar_width	= bar_width,
-			title		= f"Rx Rssi through time ({len(resp)} samples)",
+			title		= f"Rx Snr through time ({len(resp)} samples)",
 			x_label		= "Time",
-			y_label		= "Rx Rssi",
+			y_label		= "Rx Snr",
 			graph_type 	= "multiline"
 		)
 	}
@@ -336,8 +342,8 @@ async def mx_charts_nodeinfo(request: Request, response: Response, year: QueryYe
 			"title"        : title,
 			"root"         : root,
 
-			"years"        : years,
-			"year_selected": year,
+			"count_all"    : count_all,
+			"count_filter" : count_filter,
 			"count"        : count,
 
 			"images"       : images,

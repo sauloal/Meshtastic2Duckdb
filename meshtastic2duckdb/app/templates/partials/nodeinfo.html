@@ -4,7 +4,12 @@
 
 <h2>Node Info</h2>
 
-<p class="lead">Meshtastic Logger - {{ title }} ({{ data | length }})</p>
+<small>
+Database Size {{ count_all | format_integer }}
+Result Size {{ count_filter | format_integer }}
+Return Limit {{count | format_integer }}
+Return Size {{ data | length | format_integer }}
+</small>
 
 <div class="row" loopid="0">
 	{% for image_title, image_data in images.items() %}
