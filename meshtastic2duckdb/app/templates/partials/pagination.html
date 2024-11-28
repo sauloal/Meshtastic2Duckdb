@@ -1,0 +1,87 @@
+{% macro paginator(query_filter, target, count_all, count_filter, count_res)  %}
+
+	{% set offset_curr = query_filter.offset                        %}
+	{% set offset_last = count_filter        //  query_filter.limit * query_filter.limit %}
+	{% set offset_prev = query_filter.offset -   query_filter.limit %}
+	{% set offset_next = query_filter.offset +   query_filter.limit %}
+
+	{% set offset_prev = offset_prev if offset_prev >= 0           else 0           %}
+	{% set offset_next = offset_next if offset_next <= offset_last else offset_last %}
+
+	{% set offset_context = 4 %}
+	{% set url = url_for(url_self).include_query_params( **url_opts ) %}
+
+
+	{#	
+	https://getbootstrap.com/docs/4.0/components/pagination/	
+	query_filter {{ query_filter }}
+	count_all    {{ count_all    }}
+	count_filter {{ count_filter }}
+	count_res    {{ count_res    }}
+	limit        {{ query_filter.limit  }}
+	offset       {{ query_filter.offset }}
+
+	offset_curr  {{ offset_curr }}
+	offset_last  {{ offset_last }}
+	offset_prev  {{ offset_prev }}
+	offset_next  {{ offset_next }}
+	#}
+
+	<nav>
+		{% set url_offset_opts = url_opts.copy() %}
+		<ul class="pagination justify-content-center">
+			{% if 0 == offset_curr %}
+				<li class="page-item disabled"><a class="page-link">First</a></li>
+			{% else %}
+				{% set _ = url_offset_opts.update({"offset": 0}) %}
+				<li class="page-item">         <a class="page-link" hx-get="{{ url_for(url_self).include_query_params( **url_offset_opts ) }}" hx-target="#{{ target }}">First</a></li>
+			{% endif %}
+
+
+			{% if offset_prev == offset_curr %}
+				<li class="page-item disabled"><a class="page-link">Prev</a></li>
+			{% else %}
+				{% set _ = url_offset_opts.update({"offset": offset_prev}) %}
+				<li class="page-item">         <a class="page-link" hx-get="{{ url_for(url_self).include_query_params( **url_offset_opts ) }}" hx-target="#{{ target }}">Prev</a></li>
+			{% endif %}
+
+
+
+			{% for offset in range(0, count_filter, query_filter.limit) %}
+
+				{% if ((offset - offset_curr) <= (offset_context*query_filter.limit)) and ((offset - offset_curr) >= (-1*offset_context*query_filter.limit)) %}
+					{% if offset == offset_curr %}
+						<li class="page-item active"><a class="page-link">{{ offset+1 }}</a></li>
+					{% else %}
+						{% set _ = url_offset_opts.update({"offset": offset}) %}
+						<li class="page-item">       <a class="page-link" hx-get="{{ url_for(url_self).include_query_params( **url_offset_opts ) }}" hx-target="#{{ target }}">{{ offset+1 }}</a></li>
+					{% endif %}
+				{% endif %}
+
+			{% endfor %}
+
+
+
+			{% if offset_next == offset_curr%}
+				<li class="page-item disabled"><a class="page-link">Next</a></li>
+			{% else %}
+				{% set _ = url_offset_opts.update({"offset": offset_next}) %}
+				<li class="page-item">         <a class="page-link" hx-get="{{ url_for(url_self).include_query_params( **url_offset_opts ) }}" hx-target="#{{ target }}">Next</a></li>
+			{% endif %}
+
+
+
+			{% if offset_last == offset_curr%}
+				<li class="page-item disabled"><a class="page-link">Last ({{offset_last+1}})</a></li>
+			{% else %}
+				{% set _ = url_offset_opts.update({"offset": offset_last}) %}
+				<li class="page-item">         <a class="page-link" hx-get="{{ url_for(url_self).include_query_params( **url_offset_opts ) }}" hx-target="#{{ target }}">Last ({{offset_last+1}})</a></li>
+			{% endif %}
+
+		</ul>
+	</nav>
+
+{% endmacro  %}
+
+
+

@@ -1,0 +1,13 @@
+{% include 'index_navbar.html' with context %}
+
+<h2>{{ title }}</h2>
+
+{% if extend is defined %}
+
+	{% include extend %}
+
+{% else %}
+
+	{% include 'index_hello.html' %}
+
+{% endif %}

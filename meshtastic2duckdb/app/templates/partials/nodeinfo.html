@@ -3,8 +3,6 @@
 
 {% block content %}
 
-<h2>Node Info</h2>
-
 <small>
 <b>Database Size</b>      {{ count_all    | format_integer }}
 <b>Result Size</b>        {{ count_filter | format_integer }}
@@ -66,5 +64,10 @@
 	</div>
 
 </div>
+
+
+
+{{ paginator(query_filter, target, count_all, count_filter, count_res)  }}
+
 
 {% endblock %}

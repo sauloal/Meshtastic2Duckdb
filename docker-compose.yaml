@@ -55,5 +55,13 @@ services:
     domainname: meshtastic
     hostname: logger
 
+  restarter:
+    image: docker:cli
+    volumes: ["/var/run/docker.sock:/var/run/docker.sock"]
+    command: ["/bin/sh", "-c", "while true; do sleep 86400; docker restart meshtastic2duckdb-logger-1 meshtastic2duckdb-server-1; done"]
+    restart: unless-stopped
+    domainname: meshtastic
+    hostname: restarter
+
 networks:
   meshtastic:

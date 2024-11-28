@@ -2,26 +2,27 @@
 
 <tr>
 
-<td>
-<label>{{ label }}</label>
-</td>
+	<td>
+		<label>{{ label }}</label>
+	</td>
 
-<td>
-<select id="select-{{name.lower().replace("_","")}}"
-	name="{{name}}"
-	class="custom-select"
-	autocomplete="off">
 
-	{% if values is not none %}
-		{% set curr = cls[name] | string() %}
+	<td>
+		<select id="select-{{name.lower().replace("_","")}}"
+			name="{{name}}"
+			class="custom-select"
+			autocomplete="off">
 
-		{% for v_name, v_val in values %}
-			{% set nval = v_val     | string() %}
-			<option value="{{ nval }}" {{ "selected" if nval == curr else ""}}>{{ v_name }}</option>
-		{% endfor %}
-	{% endif %}
-</select>
-</td>
+			{% if values is not none %}
+				{% set curr = cls[name] | string() %}
+
+				{% for v_name, v_val in values %}
+					{% set nval = v_val     | string() %}
+					<option value="{{ nval }}" {{ "selected" if nval == curr else ""}}>{{ v_name }}</option>
+				{% endfor %}
+			{% endif %}
+		</select>
+	</td>
 
 </tr>
 
