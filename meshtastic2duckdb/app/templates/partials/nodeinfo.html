@@ -1,15 +1,17 @@
 {% from "partials/form_filter.html" import build_form_filter with context %}
+{% from "partials/pagination.html"  import paginator         with context %}
 
 {% block content %}
 
 <h2>Node Info</h2>
 
 <small>
-Database Size {{ count_all | format_integer }}
-Result Size {{ count_filter | format_integer }}
-Return Limit {{count | format_integer }}
-Return Size {{ data | length | format_integer }}
+<b>Database Size</b>      {{ count_all    | format_integer }}
+<b>Result Size</b>        {{ count_filter | format_integer }}
+<b>Result Return Size</b> {{ count_res    | format_integer }}
 </small>
+
+
 
 <div class="row" loopid="0">
 	{% for image_title, image_data in images.items() %}
@@ -27,6 +29,12 @@ Return Size {{ data | length | format_integer }}
 	{% endfor %}
 </div>
 
+
+
+{{ paginator(query_filter, target, count_all, count_filter, count_res)  }}
+
+
+
 <div class="row">
 	<div class="col-9" style="max-height:100%;overflow:auto">
 		<table class="table table-sm table-hover thead-dark text-nowrap table-bordered">
@@ -42,7 +50,7 @@ Return Size {{ data | length | format_integer }}
 			<tbody>
 				{% for row in data %}
 				<tr>
-					<th scope="row">{{ loop.index }}</th>
+					<th scope="row">{{ query_filter.offset + loop.index }}</th>
 					{% for (p,k,f),v in row.items() | sort %}
 						<td name="{{ k }}">{{ f(v) }}</td>
 					{% endfor %}
@@ -54,7 +62,6 @@ Return Size {{ data | length | format_integer }}
 
 	<div class="col-3">
 		{# https://htmx.org/attributes/hx-params/ #}
-		{% set target="#container" %}
 		{{ build_form_filter(url_self, url_opts, target, html_filters) }}
 	</div>
 

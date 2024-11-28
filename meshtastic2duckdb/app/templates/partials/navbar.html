@@ -11,7 +11,7 @@
 		<ul class="navbar-nav">
 		{% for url_title, url_name in urls.items()  %}
 			<li class="nav-item {{ "active" if url_name == root else "" }}">
-				<a class="nav-link" hx-boost="true" hx-get="{{ url_for(url_name) }}#{{ url_name }}" hx-target="#container">{{ url_title }}</a>
+				<a class="nav-link" hx-boost="true" hx-get="{{ url_for(url_name) }}#{{ url_name }}" hx-target="{{ target }}">{{ url_title }}</a>
 			</li>
 		{% endfor %}
 		</ul>

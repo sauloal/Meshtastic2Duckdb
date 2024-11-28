@@ -119,6 +119,9 @@ class ModelBase:
 		count_all, count_filter = -1, -1
 
 		q_filter = query_filter.__class__(**{k:v for k,v in query_filter.model_dump().items() if k not in ["offset","limit"]})
+		q_filter.limit = None
+
+		print(f"  q_filter {q_filter}")
 
 		with session_manager as session:
 			qry          = query_filter(session, cls)

@@ -1,7 +1,7 @@
 import datetime
 
-from fastapi            import FastAPI, APIRouter, status, Request, Response, Path, Query
-from fastapi            import Depends
+from fastapi            import FastAPI, APIRouter, Request, Response, Path, Query, Depends
+from fastapi            import status
 
 from fastapi.templating import Jinja2Templates
 from fastapi.responses  import HTMLResponse
@@ -55,7 +55,7 @@ QueryCount = Annotated[int | None, Query(ge=5, le=1_000)]
 
 
 @router.get("/")
-async def mx_root(request: Request, year: QueryYear, count: QueryCount = 10):
+async def mx_root(request: Request):
 	urls          = get_urls()
 	title         = "Home"
 	root          = urls[title]
@@ -263,7 +263,7 @@ def gen_image_data(resp, x_name, y_names ):
 
 @router.get("/charts/nodeinfo")
 async def mx_charts_nodeinfo(request: Request, response: Response, year: QueryYear, session_manager: db.SessionManagerDepRO, query_filter: models.NodeInfo.__filter__(),
-	count: QueryCount = 10, image_width: QueryImageDimension = 500, image_height: QueryImageDimension = 250, bar_width: QueryBarWidth=0.8):
+	image_width: QueryImageDimension = 500, image_height: QueryImageDimension = 250, bar_width: QueryBarWidth=0.8):
 
 	"""
 	print(f"mx_charts_temp {year=} {count=} {image_width=} {image_height=} {bar_width=} {session_manager=}")
@@ -294,8 +294,8 @@ async def mx_charts_nodeinfo(request: Request, response: Response, year: QueryYe
 	root			= urls[title]
 	years			= list( range(year_get_min(), year_get_max()+1) )
 
-	labels			= list( str(v) for v in range(1, count+1) )
-	values			= list(                 range(1, count+1))
+	#labels			= list( str(v) for v in range(1, count+1) )
+	#values			= list(                 range(1, count+1))
 
 	cls                     = models.NodeInfo
 	#query_filter_cls        = cls.get_filter_class()
@@ -305,14 +305,19 @@ async def mx_charts_nodeinfo(request: Request, response: Response, year: QueryYe
 	url_self                = "mx_charts_nodeinfo"
 	url_opts                = {k:v for k,v in query_filter.model_dump().items() if v is not None}
 
-	container               = "#container"
+	target                  = "#container"
 	html_filters            = query_filter.gen_html_filters(url_self, lambda column: cls.Query(session_manager=session_manager, query_filter=query_filter, filter_is_unique=column))
-	#print("query_filter", type(query_filter), query_filter, type(html_filters), html_filters)
+	print("query_filter", type(query_filter), query_filter, type(html_filters), html_filters)
 
 	resp                    = cls.Query(session_manager=session_manager, query_filter=query_filter)
 	count_all, count_filter = cls.Count(session_manager=session_manager, query_filter=query_filter)
+	count_res               = len(resp)
 	#print( resp )
 
+	def calc_offset(url, url_for, offset):
+		up = { k:v for k,v in url_opts.items() }
+		up["offset" ] = offset
+		return url_for(url, "name").include_query_params(2**up)
 
 	images                  = {
 		"Rx Rssi": gen_image(
@@ -320,7 +325,7 @@ async def mx_charts_nodeinfo(request: Request, response: Response, year: QueryYe
 			image_height	= image_height,
 			image_width	= image_width,
 			bar_width	= bar_width,
-			title		= f"Rx Rssi through time ({len(resp)} samples)",
+			title		= f"Rx Rssi through time ({count_res:,d}/{count_filter:,d}/{count_all:,d})",
 			x_label		= "Time",
 			y_label		= "Rx Rssi",
 			graph_type 	= "multiline"
@@ -330,7 +335,7 @@ async def mx_charts_nodeinfo(request: Request, response: Response, year: QueryYe
 			image_height	= image_height,
 			image_width	= image_width,
 			bar_width	= bar_width,
-			title		= f"Rx Snr through time ({len(resp)} samples)",
+			title		= f"Rx Snr through time ({count_res:,d}/{count_filter:,d}/{count_all:,d})",
 			x_label		= "Time",
 			y_label		= "Rx Snr",
 			graph_type 	= "multiline"
@@ -341,17 +346,21 @@ async def mx_charts_nodeinfo(request: Request, response: Response, year: QueryYe
 		request=request, name="partials/nodeinfo.html", context={
 			"title"        : title,
 			"root"         : root,
+			"target"       : target,
 
 			"count_all"    : count_all,
 			"count_filter" : count_filter,
-			"count"        : count,
+			"count_res"    : count_res,
 
 			"images"       : images,
 
 			"data"         : tuple(r.model_pretty_dump() for r in resp),
+			"query_filter" : query_filter,
 			"html_filters" : html_filters,
 			"url_self"     : url_self,
-			"url_opts"     : url_opts
+			"url_opts"     : url_opts,
+
+			"calc_offset"  : calc_offset
 		}
 	)
 
