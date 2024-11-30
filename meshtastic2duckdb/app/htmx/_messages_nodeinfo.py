@@ -102,7 +102,7 @@ async def mx_messages_nodeinfo(request: Request, response: Response, session_man
 
 			#"calc_offset"  : calc_offset,
 
-			"extend"       : "partials/nodeinfo.html"
+			"extend"       : "partials/messages_nodeinfo.html"
 		}
 	)
 

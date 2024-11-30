@@ -1,15 +1,3 @@
-{% from "partials/form_filter.html" import build_form_filter with context %}
-{% from "partials/pagination.html"  import paginator         with context %}
-
-{% block content %}
-
-<small>
-<b>Database Size</b>      {{ count_all    | format_integer }}
-<b>Result Size</b>        {{ count_filter | format_integer }}
-<b>Result Return Size</b> {{ count_res    | format_integer }}
-</small>
-
-
 
 <div class="row" loopid="0">
 	{% for image_title, image_data in images.items() %}
@@ -69,5 +57,3 @@
 
 {{ paginator(query_filter, target, count_all, count_filter, count_res)  }}
 
-
-{% endblock %}

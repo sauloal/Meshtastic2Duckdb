@@ -4,10 +4,10 @@
 
 {% if extend is defined %}
 
-	{% include extend %}
+	{% include 'partials/messages.html' with context %}
 
 {% else %}
 
-	{% include 'index_hello.html' %}
+	{% include 'index_hello.html' with context %}
 
 {% endif %}

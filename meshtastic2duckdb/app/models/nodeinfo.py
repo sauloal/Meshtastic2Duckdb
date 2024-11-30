@@ -27,13 +27,13 @@ class NodeInfoClass(MessageClass):
 	__pretty_names__ = {
 		**MessageClass.__pretty_names__,
 		**{
-			"user_id"   : (4, "User ID"       , converters.user_id),
-			"longName"  : (4, "Long Name"     , converters.echo),
-			"shortName" : (4, "Short Name"    , converters.echo),
-			"macaddr"   : (4, "MAC Addr"      , converters.echo),
-			"hwModel"   : (4, "Hardware Model", converters.echo),
-			"role"      : (4, "Role"          , converters.echo),
-			"publicKey" : (6, "Public Key"    , converters.echo),
+			"user_id"   : ( 2, "User ID"       , converters.user_id),
+			"longName"  : ( 1, "Long Name"     , converters.echo),
+			"shortName" : ( 1, "Short Name"    , converters.echo),
+			"macaddr"   : ( 3, "MAC Addr"      , converters.echo),
+			"hwModel"   : ( 3, "Hardware Model", converters.echo),
+			"role"      : ( 3, "Role"          , converters.echo),
+			"publicKey" : (99, "Public Key"    , converters.echo),
 		}
 	}
 
@@ -75,7 +75,7 @@ class Roles(str, Enum):
 	ROUTER         : str = "ROUTER"
 
 
-class NodeInfoFilterQueryParams(TimedFilterQueryParams):
+class NodeInfoFilterQueryParams(MessageFilterQueryParams):
 	userIds    : Annotated[Optional[str], Query(default=None ) ]
 	shortNames : Annotated[Optional[str], Query(default=None ) ]
 	longNames  : Annotated[Optional[str], Query(default=None ) ]
@@ -92,11 +92,11 @@ class NodeInfoFilterQueryParams(TimedFilterQueryParams):
 				"by-hw-model"  : ("hwModels"  , str  , True),
 				"by-role"      : ("roles"     , Roles, True),
 			},
-			**TimedFilterQueryParams.endpoints()
+			**MessageFilterQueryParams.endpoints()
 		}
 
 	def __call__(self, session: dbgenerics.GenericSession, cls, filter_is_unique: str|None=None):
-		qry = TimedFilterQueryParams.__call__(self, session, cls, filter_is_unique=filter_is_unique)
+		qry = MessageFilterQueryParams.__call__(self, session, cls, filter_is_unique=filter_is_unique)
 
 		for k in self.model_fields.keys():
 			v = getattr(self, k)
@@ -165,7 +165,7 @@ class NodeInfoFilterQueryParams(TimedFilterQueryParams):
 			[self, "roles"     , "Roles"          , "select", [["-", ""]] + [[r,r] for r in Roles.__members__] ],
 		]
 
-		filters     = TimedFilterQueryParams.gen_html_filters(self, url)
+		filters     = MessageFilterQueryParams.gen_html_filters(self, url, query)
 		#filters.extend( gen_html_filters(self, url, filter_opts) )
 		filters.extend( filter_opts )
 

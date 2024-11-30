@@ -1,0 +1,60 @@
+
+<div class="row" loopid="0">
+	{% for image_title, image_data in images.items() %}
+		<div class="col-6" loopid="{{ loop.index0 }}">
+			<div name="{{ image_title }}">
+				{{ image_data.div    | safe }}
+				{{ image_data.script | safe }}
+			</div>
+		</div>
+		{% if loop.index0 != 0 and loop.index0 % 2 == 0 %}
+</div>
+<div class="row" loopid="{{ loop.index }}">
+		{% endif %}
+
+	{% endfor %}
+</div>
+
+
+
+{{ paginator(query_filter, target, count_all, count_filter, count_res)  }}
+
+
+
+<div class="row">
+	<div class="col-9" style="max-height:100%;overflow:auto">
+		<table class="table table-sm table-hover thead-dark text-nowrap table-bordered">
+			<thead>
+				<tr>
+					<th scope="col" name="id">Id</th>
+					{% for p,k,f in data[0].keys() | sort %}
+					<th scope="col" name="{{ k }}">{{ k }}</th>
+					{% endfor %}
+				</tr>
+			</thead>
+
+			<tbody>
+				{% for row in data %}
+				<tr>
+					<th scope="row">{{ query_filter.offset + loop.index }}</th>
+					{% for (p,k,f),v in row.items() | sort %}
+						<td name="{{ k }}">{{ f(v) }}</td>
+					{% endfor %}
+				</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+	</div>
+
+	<div class="col-3">
+		{# https://htmx.org/attributes/hx-params/ #}
+		{{ build_form_filter(url_self, url_opts, target, html_filters) }}
+	</div>
+
+</div>
+
+
+
+{{ paginator(query_filter, target, count_all, count_filter, count_res)  }}
+
+

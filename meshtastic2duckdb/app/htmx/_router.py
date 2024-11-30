@@ -29,5 +29,6 @@ templates.env.filters["format_integer"] = lambda x: f"{x:,d}"
 def get_urls():
         return {
                 "Home"     : "mx_home",
-                "Node Info": "mx_messages_nodeinfo"
+                "Node Info": "mx_messages_nodeinfo",
+                "Position" : "mx_messages_position"
         }

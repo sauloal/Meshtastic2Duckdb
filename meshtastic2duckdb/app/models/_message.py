@@ -1,5 +1,6 @@
-from ._base import *
-from . import _converters as converters
+from ._base  import *
+from .       import _converters as converters
+from fastapi import params      as fastapi_params
 
 class MessageClass(ModelBaseClass):
 	from_node : int64
@@ -47,24 +48,24 @@ class MessageClass(ModelBaseClass):
 		**ModelBaseClass.__pretty_names__,
 		**{
 			#"gateway_receive_time": (0,"Gateway Receive Time", converters.epoch_to_str)
-			"from_node" : (1, "From Node" , converters.echo),
-			"to_node"   : (1, "To Node"   , converters.echo),
+			"from_node" : (50, "From Node" , converters.echo),
+			"to_node"   : (50, "To Node"   , converters.echo),
 
-			"fromId"    : (2, "From ID"   , converters.user_id),
-			"toId"      : (2, "To ID"     , converters.user_id),
+			"fromId"    : (51, "From ID"   , converters.user_id),
+			"toId"      : (51, "To ID"     , converters.user_id),
 
-			"rxTime"    : (3, "Rx Time"   , converters.epoch_to_str),
-			"rxRssi"    : (3, "Rx Rssi"   , converters.echo),
-			"rxSnr"     : (3, "Rx Snr"    , converters.echo),
+			"rxTime"    : (52, "Rx Time"   , converters.epoch_to_str),
+			"rxRssi"    : (52, "Rx Rssi"   , converters.echo),
+			"rxSnr"     : (52, "Rx Snr"    , converters.echo),
 
-			"hopStart"  : (6, "Hop Start" , converters.echo),
-			"hopLimit"  : (6, "Hop Limit" , converters.echo),
+			"hopStart"  : (54, "Hop Start" , converters.echo),
+			"hopLimit"  : (54, "Hop Limit" , converters.echo),
 
-			"message_id": (5, "Message ID", converters.echo),
-			"priority"  : (5, "Priority"  , converters.echo),
+			"message_id": (53, "Message ID", converters.echo),
+			"priority"  : (53, "Priority"  , converters.echo),
 
-			"portnum"   : (6, "Port Num"  , converters.echo),
-			"bitfield"  : (6, "Bit Field" , converters.echo),
+			"portnum"   : (54, "Port Num"  , converters.echo),
+			"bitfield"  : (54, "Bit Field" , converters.echo),
 		}
 	}
 
@@ -92,7 +93,7 @@ class Message(ModelBase, SQLModel):
 	bitfield  : int8  | None = Field(default=None, sa_type=SmallInteger(), nullable=True  )
 
 	__dataclass__ = None
-	__filter__    = None
+	__filter__    = lambda: MessageFilterQuery
 
 	@classmethod
 	def get_data_class(cls):
@@ -101,3 +102,64 @@ class Message(ModelBase, SQLModel):
 	@classmethod
 	def get_filter_class(cls):
 		return cls.__filter__()
+
+
+class MessageFilterQueryParams(TimedFilterQueryParams):
+	"""
+        from_node : int64
+        to_node   : int64
+
+        fromId    : str   | None
+        toId      : str   | None
+	"""
+	pass
+
+	def __call__(self, session: dbgenerics.GenericSession, cls, filter_is_unique: str|None=None):
+		qry = TimedFilterQueryParams.__call__(self, session, cls, filter_is_unique=filter_is_unique)
+
+		for k in self.model_fields.keys():
+			v = getattr(self, k)
+			if isinstance(v, fastapi_params.Depends):
+				setattr(self, k, v.dependency())
+
+		#for a in ["since", "until", "time_from", "time_length"]:
+		#	setattr(self, a, None if getattr(self, a) in ("",None) else getattr(self, a))
+
+		return qry
+
+	def gen_html_filters(self, url, query):
+		#print("gen_html_filters :: SELF", self)
+
+		from_nodes   = query("from_node")
+		to_nodes     = query("to_node")
+		from_ids     = query("fromId")
+		to_ids       = query("toId")
+
+		filter_opts = [
+			[self, "from_nodes", "From Node", "select", [["-", ""]] + [[r,r] for r in from_nodes ]],
+			[self, "to_nodes",   "To Node",   "select", [["-", ""]] + [[r,r] for r in to_nodes   ]],
+			[self, "from_ids",   "From ID",   "select", [["-", ""]] + [[r,r] for r in from_ids   ]],
+			[self, "to_ids",     "To ID",     "select", [["-", ""]] + [[r,r] for r in to_ids     ]],
+		]
+
+		filters     = TimedFilterQueryParams.gen_html_filters(self, url, query)
+		filters.extend( filter_opts )
+
+		return filters
+
+	@classmethod
+	def endpoints(cls):
+		return {
+			**{
+				"from_nodes" : ("from_nodes" , int  , True ),
+				"to_nodes"   : ("to_nodes"   , int  , True ),
+				"from_ids"   : ("from_ids"   , int  , True ),
+				"to_ids"     : ("to_ids"     , int  , True ),
+			},
+			**TimedFilterQueryParams.endpoints()
+		}
+
+MessageFilterQuery = Annotated[MessageFilterQueryParams, Depends(MessageFilterQueryParams)]
+
+
+

@@ -111,8 +111,8 @@ def gen_html_filters(inst, url: str, filter_opts: list[ tuple[str,str,str, list[
 class SharedFilterQueryParams(BaseModel):
 	offset  : Annotated[ int                  |None, Query(default= 0 , ge=0)         ]
 	limit   : Annotated[ int                  |None, Query(default=10 , gt=0, le=100) ]
-	#dryrun  : Annotated[ bool                 |None, Query(default=False)             ]
 	order   : Annotated[ Literal["asc", "dsc"]|None, Query(default="asc")             ]
+	# dryrun  : Annotated[ bool                 |None, Query(default=False)             ]
 	# q       : Annotated[ str                  |None              , Query(default=None)              ]
 	# reversed: Annotated[ bool                               , Query(default=False)             ]
 	# order_by: Annotated[ Literal["created_at", "updated_at"], Query(default="created_at")      ]
@@ -167,7 +167,7 @@ class SharedFilterQueryParams(BaseModel):
 		res = f"{{ {res} }}"
 		return res
 
-	def gen_html_filters(self, url):
+	def gen_html_filters(self, url, query):
 		#print("gen_html_filters :: SELF", self)
 		#filters = TimedFilterQueryParams.gen_html_filters(self, url, target=target)
 
@@ -284,7 +284,7 @@ class TimedFilterQueryParams(SharedFilterQueryParams):
 
 		return qry
 
-	def gen_html_filters(self, url):
+	def gen_html_filters(self, url, query):
 		#print("gen_html_filters :: SELF", self)
 
 		filter_opts = [
@@ -320,7 +320,7 @@ class TimedFilterQueryParams(SharedFilterQueryParams):
 			]
 		]
 
-		filters     = SharedFilterQueryParams.gen_html_filters(self, url)
+		filters     = SharedFilterQueryParams.gen_html_filters(self, url, query)
 		#filters.extend( gen_html_filters(self, url, filter_opts) )
 		filters.extend( filter_opts )
 

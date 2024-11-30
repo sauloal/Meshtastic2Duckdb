@@ -1,0 +1,13 @@
+{% from "partials/form_filter.html" import build_form_filter with context %}
+{% from "partials/pagination.html"  import paginator         with context %}
+
+
+<small>
+<b>Database Size</b>      {{ count_all    | format_integer }}
+<b>Result Size</b>        {{ count_filter | format_integer }}
+<b>Result Return Size</b> {{ count_res    | format_integer }}
+</small>
+
+
+{% include extend with context %}
+

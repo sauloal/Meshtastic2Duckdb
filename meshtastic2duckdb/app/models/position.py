@@ -18,6 +18,25 @@ class PositionClass(MessageClass):
 	latitude            : float
 	longitude           : float
 
+	@classmethod
+	def quality(cls, pdop):
+		# https://www.everythingrf.com/community/what-is-dilution-of-precision#:~:text=Position%20(3D)%20DOP%20(PDOP,on%20the%20horizontal%20position%20value.
+		# TODO: Implement
+		if   pdop is None:
+			return None
+		elif pdop <=  1:
+			return "Ideal"
+		elif pdop <=  2:
+			return "Excellent"
+		elif pdop <=  5:
+			return "Good"
+		elif pdop <= 10:
+			return "Moderate"
+		elif pdop <= 20:
+			return "Fair"
+		else:
+			return "Poor"
+
 	_fields: typing.ClassVar[list[tuple[str, typing.Callable]]] = [
 		["latitudeI"    , lambda packet: packet["decoded"]["position"]["latitudeI"]    ],
 		["longitudeI"   , lambda packet: packet["decoded"]["position"]["longitudeI"]   ],
@@ -32,8 +51,29 @@ class PositionClass(MessageClass):
 		["longitude"    , lambda packet: packet["decoded"]["position"]["longitude"]    ],
 	]
 
+	__pretty_names__ = {
+		**MessageClass.__pretty_names__,
+		**{
+			"latitude"     : ( 1, "Latitude"      , converters.gps_float_to_degree_lat),
+			"longitude"    : ( 1, "Longitude"     , converters.gps_float_to_degree_lon),
+
+			"altitude"     : ( 2, "Altitude"      , converters.echo),
+			"PDOP"         : ( 2, "Position (3D) Dilution of Precision", converters.echo),
+
+			"latitudeI"    : ( 3, "iLatitude"     , converters.echo),
+			"longitudeI"   : ( 3, "iLongitude"    , converters.echo),
+
+			"time"         : ( 4, "Time"          , converters.epoch_to_str),
+			"groundSpeed"  : ( 4, "Ground Speed"  , converters.echo),
+			"groundTrack"  : ( 4, "Ground Track"  , converters.echo),
+			"satsInView"   : ( 5, "Sats In View"  , converters.echo),
+			"precisionBits": ( 5, "Precision Bits", converters.echo),
+                }
+        }
 
 position_id_seq = gen_id_seq("position")
+
+
 
 class Position(Message, SQLModel, table=True):
 	__dataclass__ = lambda: PositionClass
@@ -57,7 +97,7 @@ class Position(Message, SQLModel, table=True):
 	id                  : int64 | None = Field(primary_key=True, sa_column_kwargs={"server_default": position_id_seq.next_value()}, nullable=True)
 
 
-class PositionFilterQueryParams(TimedFilterQueryParams):
+class PositionFilterQueryParams(MessageFilterQueryParams):
 	hasLocation   : Annotated[Optional[bool ], Query(default=None ) ]
 
 	minLatitudeI  : Annotated[Optional[int  ], Query(default=None, ge=-90_000_000, le=90_000_000 ) ]
@@ -87,7 +127,7 @@ class PositionFilterQueryParams(TimedFilterQueryParams):
 			**{
 				"by-has-location": ("hasLocation"   , bool  , False),
 			},
-			**TimedFilterQueryParams.endpoints()
+			**MessageFilterQueryParams.endpoints()
 		}
 
 	def _filter(self, qry, cls):
@@ -126,8 +166,8 @@ class PositionFilterQueryParams(TimedFilterQueryParams):
 
 		return qry
 
-	def __call__(self, session: dbgenerics.GenericSession, cls):
-		qry = TimedFilterQueryParams.__call__(self, session, cls)
+	def __call__(self, session: dbgenerics.GenericSession, cls, filter_is_unique: str|None=None):
+		qry = MessageFilterQueryParams.__call__(self, session, cls, filter_is_unique=filter_is_unique)
 
 		for k in self.model_fields.keys():
 			v = getattr(self, k)
@@ -137,6 +177,39 @@ class PositionFilterQueryParams(TimedFilterQueryParams):
 		qry = self._filter(qry, cls)
 
 		return qry
+
+	def gen_html_filters(self, url, query):
+		#print("gen_html_filters :: SELF", self)
+
+		"""
+		["LatitudeI"  , "latitudeI"  ],
+		["LongitudeI" , "longitudeI" ],
+		["Latitude"   , "latitude"   ],
+		["Longitude"  , "longitude"  ],
+		["Altitude"   , "altitude"   ],
+		["PDOP"       , "PDOP"       ],
+		["GroundSpeed", "GroundSpeed"],
+
+		user_ids   = query("user_id")
+		shortNames = query("shortName")
+		longNames  = query("longName")
+		hwModels   = query("hwModel")
+
+		print(f"gen_html_filters {user_ids}")
+
+		filter_opts = [
+			[self, "userIds"   , "User IDs"       , "select", [["-", ""]] + [[r,r] for r in user_ids         ] ],
+			[self, "shortNames", "Short Names"    , "select", [["-", ""]] + [[r,r] for r in shortNames       ] ],
+			[self, "longNames" , "Long Names"     , "select", [["-", ""]] + [[r,r] for r in longNames        ] ],
+			[self, "hwModels"  , "Hardware Models", "select", [["-", ""]] + [[r,r] for r in hwModels         ] ],
+			[self, "roles"     , "Roles"          , "select", [["-", ""]] + [[r,r] for r in Roles.__members__] ],
+		]
+		"""
+
+		filters     = MessageFilterQueryParams.gen_html_filters(self, url, query)
+		#filters.extend( filter_opts )
+
+		return filters
 
 PositionFilterQuery = Annotated[PositionFilterQueryParams, Depends(PositionFilterQueryParams)]
 
