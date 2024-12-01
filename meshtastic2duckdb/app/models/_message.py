@@ -105,14 +105,10 @@ class Message(ModelBase, SQLModel):
 
 
 class MessageFilterQueryParams(TimedFilterQueryParams):
-	"""
-        from_node : int64
-        to_node   : int64
-
-        fromId    : str   | None
-        toId      : str   | None
-	"""
-	pass
+	from_nodes    : Annotated[Optional[str], Query(default=None ) ]
+	to_nodes      : Annotated[Optional[str], Query(default=None ) ]
+	from_ids      : Annotated[Optional[str], Query(default=None ) ]
+	to_ids        : Annotated[Optional[str], Query(default=None ) ]
 
 	def __call__(self, session: dbgenerics.GenericSession, cls, filter_is_unique: str|None=None):
 		qry = TimedFilterQueryParams.__call__(self, session, cls, filter_is_unique=filter_is_unique)
@@ -122,8 +118,28 @@ class MessageFilterQueryParams(TimedFilterQueryParams):
 			if isinstance(v, fastapi_params.Depends):
 				setattr(self, k, v.dependency())
 
-		#for a in ["since", "until", "time_from", "time_length"]:
-		#	setattr(self, a, None if getattr(self, a) in ("",None) else getattr(self, a))
+		for a in ["from_nodes", "to_nodes", "from_ids", "to_ids"]:
+			setattr(self, a, None if getattr(self, a) in ("",None) else getattr(self, a))
+
+		if self.from_nodes is not None:
+			from_nodes = self.from_nodes.split(',')
+			if from_nodes:
+				qry = qry.where(cls.from_node.in_( from_nodes ))
+
+		if self.to_nodes is not None:
+			to_nodes = self.to_nodes.split(',')
+			if to_nodes:
+				qry = qry.where(cls.to_node.in_( to_nodes ))
+
+		if self.from_ids is not None:
+			from_ids = self.from_ids.split(',')
+			if from_ids:
+				qry = qry.where(cls.fromId.in_( from_ids ))
+
+		if self.to_ids is not None:
+			to_ids = self.to_ids.split(',')
+			if to_ids:
+				qry = qry.where(cls.toId.in_( to_ids ))
 
 		return qry
 

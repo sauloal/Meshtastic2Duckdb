@@ -102,8 +102,9 @@ class ModelBase:
 
 	@classmethod
 	def Query( cls, *, session_manager: dbgenerics.GenericSessionManager, query_filter: SharedFilterQuery, filter_is_unique: str|None = None ) -> "list[ModelBase]":
-		print("ModelBase: class query", "model", cls, "session_manager", session_manager, "query_filter", query_filter, "filter_is_unique", filter_is_unique)
 		# https://fastapi.tiangolo.com/tutorial/sql-databases/#read-heroes
+
+		# print("ModelBase: class query", "model", cls, "session_manager", session_manager, "query_filter", query_filter, "filter_is_unique", filter_is_unique)
 
 		with session_manager as session:
 			qry     = query_filter(session, cls, filter_is_unique=filter_is_unique)
@@ -114,14 +115,14 @@ class ModelBase:
 
 	@classmethod
 	def Count( cls, *, session_manager: dbgenerics.GenericSessionManager, query_filter: SharedFilterQuery ) -> tuple[int, int]:
-		print("ModelBase: class count")
+		#print("ModelBase: class count")
 
 		count_all, count_filter = -1, -1
 
 		q_filter = query_filter.__class__(**{k:v for k,v in query_filter.model_dump().items() if k not in ["offset","limit"]})
 		q_filter.limit = None
 
-		print(f"  q_filter {q_filter}")
+		#print(f"  q_filter {q_filter}")
 
 		with session_manager as session:
 			qry          = query_filter(session, cls)

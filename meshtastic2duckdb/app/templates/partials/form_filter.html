@@ -1,14 +1,17 @@
-{% from "partials/form_filter_select.html" import build_form_filter_select with context %}
+{% from "partials/form_filter_select.html"   import build_form_filter_select   with context %}
+{% from "partials/form_filter_checkbox.html" import build_form_filter_checkbox with context %}
 
 {% macro build_form_filter(url_self, url_opts, target, html_filters) %}
 	<form hx-get="{{ url_for(url_self).include_query_params( **url_opts ) }}" hx-params="*" hx-trigger="submit" hx-target="#{{ target }}">
 		<table>
 		{% for (cls, name, label, field_type, values) in html_filters %}
-			{% if field_type == "select" %}
+			{% if   field_type == "select" %}
 				{{ build_form_filter_select(cls, name, label, values) }}
+			{% elif field_type == "checkbox" %}
+				{{ build_form_filter_checkbox(cls, name, label, values) }}
 			{% endif %}
 		{% endfor %}
 		</table>
-		<input type="submit" name="Update" value="Update"/>
+		<input type="submit"/>
 	</form>
 {% endmacro  %}

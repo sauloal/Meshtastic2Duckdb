@@ -132,7 +132,7 @@ class SharedFilterQueryParams(BaseModel):
 
 
 		if filter_is_unique: # get unique values
-			print(f"FILTERING UNIQUE COLUMN: {filter_is_unique}")
+			#print(f"FILTERING UNIQUE COLUMN: {filter_is_unique}")
 			sel = select( getattr(cls, filter_is_unique) ).distinct()
 		else:
 			sel = select(cls)
@@ -140,18 +140,18 @@ class SharedFilterQueryParams(BaseModel):
 
 
 		if self.order is not None:
-			print(f" ORDER       '{self.order}'")
+			#print(f" ORDER       '{self.order}'")
 			if self.order == "asc":
 				sel = sel.order_by( cls.gateway_receive_time.asc() )
 			else:
 				sel = sel.order_by( cls.gateway_receive_time.desc() )
 
 		if self.offset is not None:
-			print(f" OFFSET      '{self.offset}'")
+			#print(f" OFFSET      '{self.offset}'")
 			sel = sel.offset(self.offset)
 
 		if self.limit  is not None:
-			print(f" LIMIT       '{self.limit}'")
+			#print(f" LIMIT       '{self.limit}'")
 			sel = sel.limit(self.limit)
 
 		return sel
@@ -171,7 +171,7 @@ class SharedFilterQueryParams(BaseModel):
 		#print("gen_html_filters :: SELF", self)
 		#filters = TimedFilterQueryParams.gen_html_filters(self, url, target=target)
 
-		print(f"gen_html_filters: {self}")
+		#print(f"gen_html_filters: {self}")
 
 		filter_opts = [
 			[self, "order" , "Order" , "select", [
@@ -248,16 +248,17 @@ class TimedFilterQueryParams(SharedFilterQueryParams):
 
 		if self.since is not None:
 			if self.time_from is None:
-				print(f" SINCE       '{self.since}' {type(self.since)}")
+				#print(f" SINCE       '{self.since}' {type(self.since)}")
 				qry = qry.where(cls.gateway_receive_time >= self.since)
 
 		if self.until is not None:
 			if self.time_length is None:
-				print(f" UNTIL       '{self.until}'")
+				#print(f" UNTIL       '{self.until}'")
 				qry = qry.where(cls.gateway_receive_time <= self.until)
 
 		if self.time_from is not None:
-			print(f" TIME_FROM   '{self.time_from}'")
+			#print(f" TIME_FROM   '{self.time_from}'")
+
 			time_from      = self.time_from
 			assert len(time_from) >= 2
 
@@ -271,7 +272,8 @@ class TimedFilterQueryParams(SharedFilterQueryParams):
 			qry            = qry.where(cls.gateway_receive_time >= time_from_ts)
 
 			if self.time_length is not None:
-				print(f" TIME_LENGTH '{self.time_length}'")
+				#print(f" TIME_LENGTH '{self.time_length}'")
+
 				time_length      = self.time_length
 				assert len(time_length) >= 2
 

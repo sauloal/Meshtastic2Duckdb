@@ -2,6 +2,44 @@ from ._router   import *
 from ._messages import *
 
 
+def lat_lon_stats(resp):
+	lat_min, lat_max, lat_mid, lon_min, lon_max, lon_mid = None, None, None, None, None, None
+
+	tracks = {}
+	for r in resp:
+		if r.latitude is not None:
+			if lat_min is None: lat_min = r.latitude
+			if lat_max is None: lat_max = r.latitude
+			lat_min = r.latitude if r.latitude <= lat_min else lat_min
+			lat_max = r.latitude if r.latitude >= lat_max else lat_max
+
+		if r.longitude is not None:
+			if lon_min is None: lon_min = r.longitude
+			if lon_max is None: lon_max = r.longitude
+			lon_min = r.longitude if r.longitude <= lon_min else lon_min
+			lon_max = r.longitude if r.longitude >= lon_max else lon_max
+
+		fromId = r.fromId.replace("!", "").replace("^", "")
+		if r.latitude is not None and r.longitude is not None:
+			tracks[fromId] = tracks.get(fromId, [])
+			tracks[fromId].append( [r.longitude, r.latitude] )
+
+	# TODO: fix negative numbers
+	if lat_min is not None and lat_max is not None:
+		lat_mid = (lat_max + lat_min) / 2.0
+	else:
+		lat_mid = 0.0
+
+	if lon_min is not None and lon_max is not None:
+		lon_mid = (lon_max + lon_min) / 2.0
+	else:
+		lon_mid = 0.0
+
+	zoom     = 15
+	max_zoom = 19
+
+	return {"lat_min": lat_min, "lat_max": lat_max, "lat_mid": lat_mid, "lon_min": lon_min, "lon_max": lon_max, "lon_mid": lon_mid, "zoom": zoom, "max_zoom": max_zoom, "tracks": tracks}
+
 @router.get("/messages/position")
 async def mx_messages_position(request: Request, response: Response, session_manager: db.SessionManagerDepRO, query_filter: models.Position.__filter__(),
 	image_width: QueryImageDimension = 500, image_height: QueryImageDimension = 250, bar_width: QueryBarWidth=0.8):
@@ -25,6 +63,7 @@ async def mx_messages_position(request: Request, response: Response, session_man
 
 	images                  = {}
 
+	location_stats          = lat_lon_stats(resp)
 
 	"""
 	images                  = {
@@ -55,27 +94,28 @@ async def mx_messages_position(request: Request, response: Response, session_man
 		request = request,
 		name    = "index_home.html",
 		context = {
-			"title"        : title,
-			"target"       : target,
+			"title"         : title,
+			"target"        : target,
 
-			"urls"         : urls,
-			"root"         : root,
+			"urls"          : urls,
+			"root"          : root,
 
-			"count_all"    : count_all,
-			"count_filter" : count_filter,
-			"count_res"    : count_res,
+			"count_all"     : count_all,
+			"count_filter"  : count_filter,
+			"count_res"     : count_res,
 
-			"images"       : images,
+			"images"        : images,
+			"location_stats": location_stats,
 
-			"data"         : tuple(r.model_pretty_dump() for r in resp),
-			"query_filter" : query_filter,
-			"html_filters" : html_filters,
-			"url_self"     : url_self,
-			"url_opts"     : url_opts,
+			"data"          : tuple(r.model_pretty_dump() for r in resp),
+			"query_filter"  : query_filter,
+			"html_filters"  : html_filters,
+			"url_self"      : url_self,
+			"url_opts"      : url_opts,
 
-			#"calc_offset"  : calc_offset,
+			#"calc_offset"   : calc_offset,
 
-			"extend"       : "partials/messages_position.html"
+			"extend"        : "partials/messages_position.html"
 		}
 	)
 

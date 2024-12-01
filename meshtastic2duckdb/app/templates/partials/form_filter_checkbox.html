@@ -1,0 +1,15 @@
+{% macro build_form_filter_checkbox(cls, name, label, values) %}
+
+<tr>
+
+	<td>
+		<label>{{ label }}</label>
+	</td>
+
+	<td>
+		<input type="checkbox" id="select-{{name.lower().replace("_","")}}" name="{{name}}" value="true" {{ "checked" if cls[name] else ""}}/>
+	</td>
+
+</tr>
+
+{% endmacro  %}

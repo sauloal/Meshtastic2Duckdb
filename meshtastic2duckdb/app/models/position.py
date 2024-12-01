@@ -146,7 +146,8 @@ class PositionFilterQueryParams(MessageFilterQueryParams):
 				selfAttr = getattr(self, func + filterName)
 				if selfAttr is not None:
 					clsAttr = getattr(cls, colName)
-					print(" ", func, filterName, colName, selfAttr, clsAttr)
+					#print(" ", func, filterName, colName, selfAttr, clsAttr)
+
 					if func == "min":
 						qry = qry.where( clsAttr != None     )
 						qry = qry.where( clsAttr >= selfAttr )
@@ -174,6 +175,9 @@ class PositionFilterQueryParams(MessageFilterQueryParams):
 			if isinstance(v, fastapi_params.Depends):
 				setattr(self, k, v.dependency())
 
+		#for a in ["userIds", "shortNames", "longNames", "hwModels", "roles"]:
+		#	setattr(self, a, None if getattr(self, a) in ("",None) else getattr(self, a))
+
 		qry = self._filter(qry, cls)
 
 		return qry
@@ -181,33 +185,12 @@ class PositionFilterQueryParams(MessageFilterQueryParams):
 	def gen_html_filters(self, url, query):
 		#print("gen_html_filters :: SELF", self)
 
-		"""
-		["LatitudeI"  , "latitudeI"  ],
-		["LongitudeI" , "longitudeI" ],
-		["Latitude"   , "latitude"   ],
-		["Longitude"  , "longitude"  ],
-		["Altitude"   , "altitude"   ],
-		["PDOP"       , "PDOP"       ],
-		["GroundSpeed", "GroundSpeed"],
-
-		user_ids   = query("user_id")
-		shortNames = query("shortName")
-		longNames  = query("longName")
-		hwModels   = query("hwModel")
-
-		print(f"gen_html_filters {user_ids}")
-
 		filter_opts = [
-			[self, "userIds"   , "User IDs"       , "select", [["-", ""]] + [[r,r] for r in user_ids         ] ],
-			[self, "shortNames", "Short Names"    , "select", [["-", ""]] + [[r,r] for r in shortNames       ] ],
-			[self, "longNames" , "Long Names"     , "select", [["-", ""]] + [[r,r] for r in longNames        ] ],
-			[self, "hwModels"  , "Hardware Models", "select", [["-", ""]] + [[r,r] for r in hwModels         ] ],
-			[self, "roles"     , "Roles"          , "select", [["-", ""]] + [[r,r] for r in Roles.__members__] ],
+			[self, "hasLocation"   , "Has Location"       , "checkbox", None ],
 		]
-		"""
 
 		filters     = MessageFilterQueryParams.gen_html_filters(self, url, query)
-		#filters.extend( filter_opts )
+		filters.extend( filter_opts )
 
 		return filters
 

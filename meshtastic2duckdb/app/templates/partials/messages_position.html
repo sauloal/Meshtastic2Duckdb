@@ -9,7 +9,8 @@
 		</div>
 		{% if loop.index0 != 0 and loop.index0 % 2 == 0 %}
 </div>
-<div class="row" loopid="{{ loop.index }}">
+
+<div class="row" loopid="{{ loop.index0 }}">
 		{% endif %}
 
 	{% endfor %}
@@ -17,11 +18,94 @@
 
 
 
-{{ paginator(query_filter, target, count_all, count_filter, count_res)  }}
+{% if data %}
+
+<div name="map" class="row">
+	<div class="col-12">
+		<div id="map"></div>
+	</div>
+</div>
+
+<div name="map-config">
+	<style>
+		#map {
+			/* configure the size of the map */
+			width: 100%;
+			height: 256px;
+			display: inline-block;
+			position: relative;
+		}
+	</style>
+
+
+	<script>
+		var L = window.L;
+
+		//{{ location_stats }}
+
+		// initialize Leaflet
+		var map = L.map('map',
+			{
+				center: [
+					{{ location_stats["lon_mid"] }},
+					{{ location_stats["lat_mid"] }}
+				],
+				zoom:   {{ location_stats["zoom"] }},
+				boxZoom: true,
+				doubleClickZoom: true,
+				dragging: true,
+				trackResize: true,
+				preferCanvas: true
+			}
+			).setView(
+				{
+					lon: {{ location_stats["lon_mid"] }},
+					lat: {{ location_stats["lat_mid"] }}
+				},
+				{{ location_stats["zoom"] }}
+			);
+
+		// add the OpenStreetMap tiles
+		L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+			maxZoom: {{ location_stats["max_zoom"] }},
+			attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap contributors</a>'
+		}).addTo(map);
+
+		// show the scale bar on the lower left corner
+		L.control.scale({imperial: false, metric: true}).addTo(map);
+
+		// show a marker on the map
+		//L.marker({lon: {{ location_stats["lon_mid"] }}, lat: {{ location_stats["lat_mid"] }}}).bindPopup('The center of the world').addTo(map);
+
+		//https://leafletjs.com/examples/geojson/
+		{% for track_name, track in location_stats["tracks"].items() | sort %}
+			var myLines_{{ track_name }} = [
+				{ "type": "LineString","coordinates": {{ track | tojson() }} },
+				{% for point in track %}
+				{ "type": "Point",     "coordinates": {{ point | tojson() }} },
+				{% endfor %}
+			];
+
+			var myStyle_{{ track_name }} = {
+				"color"  : "#ff7800",
+				"weight" : 5,
+				"opacity": 0.65
+			};
+
+			L.geoJSON(myLines_{{ track_name }}, {
+				style: myStyle_{{ track_name }}
+			}).addTo(map);
+		{% endfor %}
+	</script>
+</div>
+
+
 
 
 
 <div class="row">
+	{{ paginator(query_filter, target, count_all, count_filter, count_res)  }}
+
 	<div class="col-9" style="max-height:100%;overflow:auto">
 		<table class="table table-sm table-hover thead-dark text-nowrap table-bordered">
 			<thead>
@@ -51,9 +135,20 @@
 		{{ build_form_filter(url_self, url_opts, target, html_filters) }}
 	</div>
 
+	{{ paginator(query_filter, target, count_all, count_filter, count_res)  }}
 </div>
 
 
 
-{{ paginator(query_filter, target, count_all, count_filter, count_res)  }}
+{% else %}
+<div class="row">
+	<div class="col-9" style="max-height:100%;overflow:auto">
+		No Data
+	</div>
 
+	<div class="col-3">
+		{# https://htmx.org/attributes/hx-params/ #}
+		{{ build_form_filter(url_self, url_opts, target, html_filters) }}
+	</div>
+</div>
+{% endif %}

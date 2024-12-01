@@ -107,33 +107,33 @@ class NodeInfoFilterQueryParams(MessageFilterQueryParams):
 			setattr(self, a, None if getattr(self, a) in ("",None) else getattr(self, a))
 
 		if self.userIds is not None:
-			print(f" USER IDS    '{self.userIds}'")
+			#print(f" USER IDS    '{self.userIds}'")
 			user_ids = self.userIds.split(',')
 			if user_ids:
 				qry = qry.where(cls.user_id.in_( user_ids ))
 
 		if self.shortNames is not None:
-			print(f" SHORT NAMES '{self.shortNames}'")
+			#print(f" SHORT NAMES '{self.shortNames}'")
 			short_names = self.shortNames.split(',')
 			if short_names:
 				qry = qry.where(cls.shortName.in_( short_names ))
 
 		if self.longNames is not None:
-			print(f" LONG NAMES  '{self.longNames}'")
+			#print(f" LONG NAMES  '{self.longNames}'")
 			long_names = self.longNames.split(',')
 			if long_names:
 				qry = qry.where(cls.longName.in_( long_names ))
 
 		if self.hwModels is not None:
-			print(f" HW MODELS   '{self.hwModels}'")
+			#print(f" HW MODELS   '{self.hwModels}'")
 			hw_models = self.hwModels.split(',')
 			if long_names:
 				qry = qry.where(cls.hwModel.in_( hw_models ))
 
 		if self.roles is not None:
-			roles = self.roles.split(",")
+			#roles = self.roles.split(",")
 			if roles:
-				print(f" ROLES       '{self.roles}'")
+				#print(f" ROLES       '{self.roles}'")
 				roles     = self.roles.split(",")
 				roles     = tuple(r for r in roles if r)
 				if len(roles) > 0:
@@ -141,7 +141,7 @@ class NodeInfoFilterQueryParams(MessageFilterQueryParams):
 					#print(Roles.__members__, role_vals)
 					if not all(r in role_vals for r in roles):
 						raise HTTPException(status_code=400, detail=f"INVALID ROLES: {roles}. " + ",".join(r for r in roles if r not in role_vals))
-					print("  FILTERING ROLES")
+					#print("  FILTERING ROLES")
 					qry = qry.where( cls.role.in_(roles) )
 
 		return qry
@@ -166,7 +166,6 @@ class NodeInfoFilterQueryParams(MessageFilterQueryParams):
 		]
 
 		filters     = MessageFilterQueryParams.gen_html_filters(self, url, query)
-		#filters.extend( gen_html_filters(self, url, filter_opts) )
 		filters.extend( filter_opts )
 
 		return filters
