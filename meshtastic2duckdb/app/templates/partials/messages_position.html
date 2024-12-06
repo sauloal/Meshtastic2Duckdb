@@ -41,8 +41,6 @@
 	<script>
 		var L = window.L;
 
-		//{{ location_stats }}
-
 		// initialize Leaflet
 		var map = L.map('map',
 			{
@@ -78,16 +76,19 @@
 		//L.marker({lon: {{ location_stats["lon_mid"] }}, lat: {{ location_stats["lat_mid"] }}}).bindPopup('The center of the world').addTo(map);
 
 		//https://leafletjs.com/examples/geojson/
-		{% for track_name, track in location_stats["tracks"].items() | sort %}
+		{#
+		{% for track_name, (track_points, track_radiuses) in location_stats["tracks"].items() | sort %}
+			{% set track_index = loop.index0 %}
+
 			var myLines_{{ track_name }} = [
-				{ "type": "LineString","coordinates": {{ track | tojson() }} },
-				{% for point in track %}
+				{ "type": "LineString","coordinates": {{ track_points | tojson() }} },
+				{% for point in track_points %}
 				{ "type": "Point",     "coordinates": {{ point | tojson() }} },
 				{% endfor %}
 			];
 
 			var myStyle_{{ track_name }} = {
-				"color"  : "#ff7800",
+				"color"  : "{{ location_stats['colors'][loop.index] }}",
 				"weight" : 5,
 				"opacity": 0.65
 			};
@@ -95,6 +96,27 @@
 			L.geoJSON(myLines_{{ track_name }}, {
 				style: myStyle_{{ track_name }}
 			}).addTo(map);
+		{% endfor %}
+		#}
+
+
+		{% for track_name, (track_points, track_radiuses) in location_stats["tracks"].items() | sort %}
+			{% set track_index = loop.index0 %}
+
+			//var pol_{{ track_name }} = L.polyline({{ track_points | tojson() }}).addTo(map);
+
+			{% for point in track_points %}
+				{% set radius = track_radiuses[loop.index0] %}
+
+				var circle_{{ track_name }}_{{ loop.index0 }} = L.circle({{ point | tojson() }}, {
+					color:       'red', //'{{ location_stats["colors"][track_index][0] }}',
+					fillColor:   '#f03', //'{{ location_stats["colors"][track_index][1] }}',
+					fillOpacity: 0.5,
+					radius:      200, //{{ radius }},
+					//alt:         'alt',
+				}).addTo(map);
+				//.bindPopup('Kyiv, Ukraine is the birthplace of Leaflet!');
+			{% endfor %}
 		{% endfor %}
 	</script>
 </div>

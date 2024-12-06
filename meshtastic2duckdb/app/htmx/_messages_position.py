@@ -19,10 +19,12 @@ def lat_lon_stats(resp):
 			lon_min = r.longitude if r.longitude <= lon_min else lon_min
 			lon_max = r.longitude if r.longitude >= lon_max else lon_max
 
+		# TODO: calculate radius
 		fromId = r.fromId.replace("!", "").replace("^", "")
 		if r.latitude is not None and r.longitude is not None:
-			tracks[fromId] = tracks.get(fromId, [])
-			tracks[fromId].append( [r.longitude, r.latitude] )
+			tracks[fromId] = tracks.get(fromId, [[],[]])
+			tracks[fromId][0].append( [r.longitude, r.latitude] )
+			tracks[fromId][1].append( 10 )
 
 	# TODO: fix negative numbers
 	if lat_min is not None and lat_max is not None:
@@ -38,7 +40,30 @@ def lat_lon_stats(resp):
 	zoom     = 15
 	max_zoom = 19
 
-	return {"lat_min": lat_min, "lat_max": lat_max, "lat_mid": lat_mid, "lon_min": lon_min, "lon_max": lon_max, "lon_mid": lon_mid, "zoom": zoom, "max_zoom": max_zoom, "tracks": tracks}
+	return {
+		"lat_min": lat_min,
+		"lat_max": lat_max,
+		"lat_mid": lat_mid,
+
+		"lon_min": lon_min,
+		"lon_max": lon_max,
+		"lon_mid": lon_mid,
+
+		"zoom"    : zoom,
+		"max_zoom": max_zoom,
+		"tracks"  : tracks,
+
+		"colors"  : [ #https://github.com/pointhi/leaflet-color-markers
+			["#2A81CB","#3274A3"],
+			["#FFD326","#C1A32D"],
+			["#CB2B3E","#982E40"],
+			["#2AAD27","#31882A"],
+			["#CB8427","#98652E"],
+			["#9C2BCB","#742E98"],
+			["#7B7B7B","#6B6B6B"],
+			["#3D3D3D","#313131"],
+		]
+	}
 
 @router.get("/messages/position")
 async def mx_messages_position(request: Request, response: Response, session_manager: db.SessionManagerDepRO, query_filter: models.Position.__filter__(),

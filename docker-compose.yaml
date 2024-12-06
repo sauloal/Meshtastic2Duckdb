@@ -21,6 +21,15 @@ services:
       MESH_APP_PORT: 8000
     domainname: meshtastic
     hostname: server
+    deploy:
+      resources:
+        limits:
+          #cpus: '0.001'
+          memory: 600M
+        reservations:
+          #cpus: '0.001'
+          memory: 200M
+
     healthcheck:
       test: curl --fail http://localhost:8000/livez || exit 1
       interval: 10s
