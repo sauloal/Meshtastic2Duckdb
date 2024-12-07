@@ -1,12 +1,13 @@
 from ._router   import *
 from ._messages import *
+from ..models   import _converters as converters
 
 
 def lat_lon_stats(resp):
 	lat_min, lat_max, lat_mid, lon_min, lon_max, lon_mid = None, None, None, None, None, None
 
 	tracks = {}
-	for r in resp:
+	for p, r in enumerate(resp):
 		if r.latitude is not None:
 			if lat_min is None: lat_min = r.latitude
 			if lat_max is None: lat_max = r.latitude
@@ -22,9 +23,11 @@ def lat_lon_stats(resp):
 		# TODO: calculate radius
 		fromId = r.fromId.replace("!", "").replace("^", "")
 		if r.latitude is not None and r.longitude is not None:
-			tracks[fromId] = tracks.get(fromId, [[],[]])
-			tracks[fromId][0].append( [r.longitude, r.latitude] )
-			tracks[fromId][1].append( 10 )
+			tracks[fromId] = tracks.get(fromId, [[],[],[],[]])
+			tracks[fromId][0].append( [r.latitude , r.longitude] )
+			tracks[fromId][1].append( [r.longitude, r.latitude ] )
+			tracks[fromId][2].append( 1 )
+			tracks[fromId][3].append( f"{r.fromId} :: { p + 1 } :: { converters.gps_float_to_degree_lat(r.latitude) },{ converters.gps_float_to_degree_lon(r.longitude) } :: Time { r.time } Altitude { r.altitude } PDOP { r.PDOP } Sats In View { r.satsInView } Ground Speed { r.groundSpeed }" )
 
 	# TODO: fix negative numbers
 	if lat_min is not None and lat_max is not None:
